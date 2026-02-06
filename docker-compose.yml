@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  treemap:
+    build: .
+    container_name: acoes-treemap
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./acoes.csv:/app/acoes.csv
+      - ./app:/app
+    environment:
+      - TZ=America/Sao_Paulo
+    restart: unless-stopped

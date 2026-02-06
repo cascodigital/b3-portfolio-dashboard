@@ -1,0 +1,115 @@
+body {
+    background-color: #121212 !important;
+    transition: background-color 0.3s ease;
+}
+
+.container-fluid {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+    background-color: #1e1e1e !important;
+    border: 1px solid #37474f !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+    transition: all 0.3s ease !important;
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6) !important;
+    transform: translateY(-2px);
+}
+
+.settings-btn {
+    transition: all 0.3s ease !important;
+}
+
+.settings-btn:hover {
+    transform: rotate(90deg) scale(1.1) !important;
+    background: #388e3c !important;
+    box-shadow: 0 4px 12px rgba(46,125,50,0.4) !important;
+}
+
+button {
+    transition: all 0.2s ease !important;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+}
+
+button:active {
+    transform: translateY(0px);
+}
+
+.dash-graph {
+    animation: graphFadeIn 0.6s ease-out;
+}
+
+@keyframes graphFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+input, .form-control {
+    background-color: #2d2d2d !important;
+    border: 1px solid #455a64 !important;
+    color: #e0e0e0 !important;
+    transition: all 0.2s ease;
+}
+
+input:focus, .form-control:focus {
+    background-color: #353535 !important;
+    border-color: #66bb6a !important;
+    box-shadow: 0 0 0 0.2rem rgba(102,187,106,0.25) !important;
+}
+
+table {
+    animation: tableSlide 0.5s ease-out;
+}
+
+@keyframes tableSlide {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+tr {
+    transition: background-color 0.2s ease;
+}
+
+tr:hover {
+    background-color: #2d2d2d !important;
+}
+
+.badge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+h1, h2, h4 {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.delete-btn {
+    transition: all 0.2s ease !important;
+}
+
+.delete-btn:hover {
+    background: #d32f2f !important;
+    transform: scale(1.1) !important;
+}
