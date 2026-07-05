@@ -6,6 +6,21 @@ Dashboard dark de carteira B3 pensado pra ficar aberto numa tela dedicada (TV, k
 
 ![painel](exemplo.png)
 
+## Quickstart (60 segundos)
+
+```bash
+git clone https://github.com/cascodigital/b3-portfolio-dashboard
+cd b3-portfolio-dashboard
+
+# 1. sua carteira: edite data/carteira.json (ticker, qtd, preço de entrada)
+# 2. sua watchlist: edite data/acoes.txt (um ticker B3 por linha)
+
+python3 build.py --no-push
+xdg-open painel-acoes.html   # ou só abra o arquivo no browser
+```
+
+Só isso. Requisito único: Python 3.9+. Tudo abaixo desta linha é **opcional** — automação, publicação numa TV e integrações.
+
 ## Como funciona
 
 ```
@@ -23,15 +38,7 @@ build.py  ──►  busca cotações (Yahoo Finance, sem token)
 
 O HTML final é estático e auto-contido — relógio e status de pregão rodam em JS ao vivo; cotações mudam a cada build.
 
-## Uso
-
-```bash
-# edite data/acoes.txt e data/carteira.json com sua carteira
-python3 build.py --no-push
-# abra painel-acoes.html no browser
-```
-
-Requisito: Python 3.9+ (usa `zoneinfo`). Nada de pip.
+## Opcionais
 
 ### Publicar no Home Assistant
 
