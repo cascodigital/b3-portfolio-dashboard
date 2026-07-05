@@ -1,0 +1,12 @@
+{
+  "_doc": "Eventos datados (um-off). Recorrentes (Focus seg, payroll 1ª sex) são calculados pelo build.py. Formato: data AAAA-MM-DD, titulo, info.",
+  "eventos": [
+    {"data": "2026-07-10", "titulo": "IPCA (Jun)", "info": "alto impacto · 09:00"},
+    {"data": "2026-07-28", "titulo": "IPCA-15 (Jul)", "info": "prévia da inflação · 09:00"},
+    {"data": "2026-08-05", "titulo": "Copom — decisão Selic", "info": "alto impacto · 18:30"},
+    {"data": "2026-08-13", "titulo": "Earnings LREN3 2T26", "info": "data a confirmar"},
+    {"data": "2026-09-16", "titulo": "Copom — decisão Selic", "info": "alto impacto · 18:30"},
+    {"data": "2026-11-04", "titulo": "Copom — decisão Selic", "info": "alto impacto · 18:30"},
+    {"data": "2026-12-09", "titulo": "Copom — decisão Selic", "info": "alto impacto · 18:30"}
+  ]
+}

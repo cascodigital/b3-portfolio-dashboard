@@ -1,0 +1,9 @@
+{
+  "_doc": "Posições reais da carteira. qtd e preco_entrada alimentam o P&L do painel.",
+  "atualizado": "2026-07-05",
+  "posicoes": [
+    {"ticker": "LREN3", "qtd": 400, "preco_entrada": 14.78},
+    {"ticker": "ITUB4", "qtd": 100, "preco_entrada": 31.20}
+  ],
+  "historico_vendas": []
+}

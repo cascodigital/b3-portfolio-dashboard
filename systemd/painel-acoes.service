@@ -1,0 +1,11 @@
+[Unit]
+Description=Painel de acoes - build e push
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/painel-acoes/build.py
+# Environment=PAINEL_SSH_DEST=root@homeassistant
+# Environment=PAINEL_SSH_PORT=22
+# Environment=RADAR_HTML_FILE=/path/analise-latest.html
+TimeoutStartSec=180
