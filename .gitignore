@@ -1,5 +1,2 @@
-__pycache__/
-*.pyc
-venv/
-.env
-*.log
+painel-acoes.html
+data/radar.json

@@ -1,64 +1,93 @@
-<div align="center">
+# 📈 Painel de Ações B3 — Dashboard 1080p pra TV / Home Assistant
 
-# B3 Portfolio Dashboard
+Dashboard dark de carteira B3 pensado pra ficar aberto numa tela dedicada (TV, kiosk, painel do Home Assistant): treemap da watchlist, carrossel de posições com P&L real, IBOV/USDBRL com sparkline, radar de análise diária e agenda econômica.
 
-**Interactive self-hosted dashboard for tracking a B3 stock portfolio.**
+É a evolução do antigo visualizador Dash/Plotly deste repo — agora **zero dependências**: um script Python (só stdlib) gera um **HTML auto-contido** a partir de um template. Sem servidor, sem pip install, sem container.
 
-![Status](https://img.shields.io/badge/Status-Active-16A34A?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)
-![Casco Digital](https://img.shields.io/badge/Casco-Digital-111827?style=flat-square)
-![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
-![Plotly](https://img.shields.io/badge/Plotly-Dash-3F4F75?style=flat-square&logo=plotly&logoColor=white)
+![painel](exemplo.png)
 
-</div>
+## Como funciona
 
----
+```
+data/acoes.txt        watchlist (tickers B3)
+data/carteira.json    posições reais (qtd + preço de entrada)
+events.json           eventos datados (Copom, IPCA, earnings)
+template.html         visual — HTML/CSS/JS com placeholders
+        │
+        ▼
+build.py  ──►  busca cotações (Yahoo Finance, sem token)
+              calcula agenda (Focus toda segunda, Payroll 1ª sexta)
+              splice no template  ──►  painel-acoes.html
+              (opcional) push via SSH pro Home Assistant
+```
 
-Dashboard interativo para acompanhar carteira de acoes da B3 em treemaps dinamicos. Projeto pessoal, self-hosted, 100% gratuito.
+O HTML final é estático e auto-contido — relógio e status de pregão rodam em JS ao vivo; cotações mudam a cada build.
 
-![Dashboard](exemplo.jpg)
-
-## Funcionalidades
-
-- **Treemap com 3 visualizacoes:** variacao do dia, 7 dias e ganho/perda total
-- **Rotacao automatica** entre telas com tempos configuraveis
-- **Graficos historicos** de 30 dias ao clicar em qualquer acao
-- **Alertas** para mudancas bruscas, oportunidades e realizacao de lucro
-- **Gerenciamento** de acoes via interface web
-- **Atualizacao** automatica a cada 5 minutos via Yahoo Finance
-
-## Quick Start
+## Uso
 
 ```bash
-git clone https://github.com/cascodigital/b3-portfolio-dashboard.git
-cd b3-portfolio-dashboard
-docker compose up -d
-# Acesse http://localhost:8050
+# edite data/acoes.txt e data/carteira.json com sua carteira
+python3 build.py --no-push
+# abra painel-acoes.html no browser
 ```
 
-## Configuracao
+Requisito: Python 3.9+ (usa `zoneinfo`). Nada de pip.
 
-Adicione acoes pela interface (botao de configuracoes) ou edite `acoes.csv`:
+### Publicar no Home Assistant
 
-```csv
-ticker,shares,avg_price
-PETR4.SA,100,25.50
-VALE3.SA,200,70.30
+O build pode empurrar o HTML pro `www/` do HA via SSH (chave, sem senha):
+
+```bash
+export PAINEL_SSH_DEST=root@homeassistant
+export PAINEL_SSH_PORT=22
+export PAINEL_SSH_PATH=/config/www/painel-acoes.html
+python3 build.py
 ```
 
-Tickers da B3 usam sufixo `.SA` (preenchido automaticamente pela GUI).
+No HA, crie uma view `type: panel` com um card `iframe` apontando pra `/local/painel-acoes.html` (sem `aspect_ratio` — ele preenche a tela sozinho). Numa TV, o addon HAOS Kiosk abre a URL direto.
 
-## Stack
+### Agendamento (systemd user timer)
 
-- [Plotly Dash](https://dash.plotly.com/) + [Dash Bootstrap](https://dash-bootstrap-components.opensource.faculty.ai/)
-- [yfinance](https://github.com/ranaroussi/yfinance) (dados com ~15min de atraso)
-- Docker com volume persistente e restart automatico
+Exemplos em `systemd/`: roda a cada 15 min durante o pregão (seg–sex 10h–17h45) + snapshot às 18:05.
 
-## Avisos
+```bash
+cp systemd/painel-acoes.* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now painel-acoes.timer
+```
 
-Projeto pessoal para uso privado. Sem autenticacao ou protecao para exposicao publica. Use com tunnel (Cloudflare, Tailscale) ou em rede local.
+### Radar (opcional)
 
----
+O quadro "radar" exibe picks de uma análise diária externa. Se você tem algum job que gera um HTML de análise, aponte `RADAR_HTML_FILE` pra ele e adapte `parse_radar()` ao seu formato — ou simplesmente edite `data/radar.json` na mão:
 
-Desenvolvido com 🐢 (e cafe) por **Casco Digital**.
+```json
+{"generatedAt": "2026-07-05T15:45", "items": [
+  {"t": "LREN3", "kind": "buy", "title": "1º — COMPRA", "body": "R$ 15,20 · Alvo +6% · Stop -3%"}
+]}
+```
+
+`kind`: `buy` (verde), `warn` (âmbar), `info` (neutro). Sem radar configurado, o quadro mostra um aviso e o painel funciona normal.
+
+## Arquivos
+
+```
+build.py          gerador (stdlib only)
+template.html     visual — edite aqui pra mudar o layout
+events.json       eventos datados; Focus/Payroll são calculados
+data/             watchlist + carteira (exemplos incluídos)
+systemd/          service + timer de exemplo
+```
+
+## Guardrails
+
+- Se mais da metade das cotações falhar, o build **aborta** sem sobrescrever o painel anterior.
+- Posição sem cotação disponível também aborta.
+- Radar indisponível cai pro cache (`data/radar.json`) — o painel nunca quebra, só fica velho.
+
+## ⚠️ Disclaimer
+
+Projeto pessoal de hobby, pra uso privado (rede interna / túnel autenticado). Não há autenticação nem hardening pra exposição pública. Não é recomendação de investimento.
+
+## 📝 Licença
+
+MIT.

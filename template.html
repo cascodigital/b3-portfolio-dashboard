@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel — Carteira & Radar B3</title>
+<style>
+:root{
+  --bg:#0a0e13; --panel:#10151c; --panel2:#151b24; --line:#1f2733;
+  --ink:#e2e9f2; --mut:#7f8ea1; --faint:#55637a;
+  --up:#2fbf8f; --up-dim:rgba(47,191,143,.14);
+  --dn:#f06860; --dn-dim:rgba(240,104,96,.14);
+  --amber:#e2a63d; --cyan:#4db8d6;
+  --mono:'SF Mono',ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace;
+  --sans:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px}
+body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .dn{color:var(--dn)}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+
+/* ── tape ── */
+.tape{overflow:hidden;border-bottom:1px solid var(--line);background:#070a0e;flex:0 0 42px;display:flex;align-items:center}
+.tape-track{display:flex;gap:44px;white-space:nowrap;animation:roll 150s linear infinite;padding-left:100%}
+@keyframes roll{to{transform:translateX(-100%)}}
+@media(prefers-reduced-motion:reduce){.tape-track{animation:none;padding-left:12px;flex-wrap:wrap}}
+.tk{font-family:var(--mono);font-size:15.5px}
+.tk b{color:#ffffff;font-weight:700;margin-right:9px}
+.tk span{margin-right:9px;color:#dde5ef}
+.tape .up{color:#48e6ae}
+.tape .dn{color:#ff8b82}
+
+/* ── market bar ── */
+.mbar{flex:0 0 46px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;border-bottom:1px solid var(--line);background:#0c1117}
+.mcenter{display:flex;gap:44px;align-items:center}
+.mright{display:flex;gap:16px;align-items:center;justify-content:flex-end}
+.mitem{display:flex;align-items:center;gap:10px}
+.mitem .lbl{margin-right:2px}
+.mitem .v{font-family:var(--mono);font-size:16px;font-weight:700}
+.mitem .v30{font-family:var(--mono);font-size:12.5px;color:var(--faint)}
+.mitem .arr{color:var(--faint);font-size:12px}
+.mitem .c{font-family:var(--mono);font-size:11.5px}
+.mitem svg{width:76px;height:26px}
+.msep{flex:1}
+.mclock{text-align:right}
+.mclock .v{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:.03em}
+.mclock .st{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.st.open{color:var(--up)} .st.closed{color:var(--dn)}
+.mdate{font-size:12px;color:var(--mut);text-transform:capitalize}
+
+/* ── layout ── */
+.wrap{flex:1;display:grid;grid-template-columns:340px 1fr 330px;grid-template-rows:1fr auto;gap:10px;padding:10px;max-width:1920px;width:100%;margin:0 auto;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.phead h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+
+/* col esquerda */
+.left{display:flex;flex-direction:column;gap:10px;min-height:0}
+.hero{padding:16px 16px 12px}
+.hero .lbl{margin-bottom:6px}
+.hero-val{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.01em}
+.hero-sub{display:flex;gap:18px;margin-top:10px}
+.hero-sub div span{display:block}
+.hero-sub .lbl{margin-bottom:2px}
+.hero-sub .num{font-size:15px;font-weight:600}
+.pos{padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.pos-dots{display:flex;gap:6px;justify-content:center}
+.pos-dots i{width:6px;height:6px;border-radius:99px;background:var(--line)}
+.pos-dots i.on{background:var(--amber)}
+@keyframes posfade{from{opacity:0}to{opacity:1}}
+.pos-inner{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;animation:posfade .4s ease}
+.pos-top{display:flex;justify-content:space-between;align-items:baseline}
+.pos-top .tkr{font-family:var(--mono);font-size:18px;font-weight:700}
+.pos-top .tag{font-size:10px;color:var(--faint);margin-left:8px}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px}
+.pos-grid .lbl{margin-bottom:2px}
+.pos-grid .num{font-size:14px;font-weight:600}
+.spark{flex:1;min-height:110px}
+.entry-note{font-size:11px;color:var(--faint)}
+.entry-note b{color:var(--amber);font-family:var(--mono);font-weight:600}
+
+/* treemap centro */
+.center{display:flex;flex-direction:column;gap:10px;min-height:0}
+.tmap{flex:1;display:flex;flex-direction:column;gap:3px;padding:10px;min-height:0}
+.trow{display:flex;gap:3px;flex:1;min-height:0}
+.cell{border-radius:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-width:0;overflow:hidden;padding:4px;cursor:default;transition:filter .12s}
+.cell:hover{filter:brightness(1.3)}
+.cell .t{font-family:var(--mono);font-weight:700;font-size:13px}
+.cell .c{font-family:var(--mono);font-size:11px;opacity:.85}
+.cell.owned{outline:2px solid var(--amber);outline-offset:-2px}
+.legend{display:flex;gap:14px;align-items:center;padding:0 14px 10px;font-size:10px;color:var(--faint)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* tooltip */
+#tip{position:fixed;z-index:10;pointer-events:none;background:#0c1117;border:1px solid #2a3342;border-radius:7px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.55);display:none;min-width:190px}
+#tip .th{display:flex;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:2px}
+#tip .ts{font-size:10.5px;color:var(--faint);margin-bottom:6px}
+#tip svg{width:180px;height:44px;display:block}
+#tip .tf{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* col direita */
+.right{display:flex;flex-direction:column;gap:10px;min-height:0}
+.movers{padding:6px 10px;display:flex;flex-direction:column}
+.mrow{display:grid;grid-template-columns:52px 1fr 58px 62px;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;padding:4px 4px;border-radius:5px}
+.mrow:hover{background:var(--panel2)}
+.mrow b{font-weight:600;color:var(--ink)}
+.mrow svg{width:100%;height:20px}
+.mrow .pr{text-align:right;color:var(--mut)}
+.mrow .ch{text-align:right}
+.radar{flex:1;min-height:0;display:flex;flex-direction:column}
+.radar-body{overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+.rcard{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:6px;padding:9px 11px}
+.rcard.warn{border-left-color:var(--amber)}
+.rcard.buy{border-left-color:var(--up)}
+.rcard h3{font-family:var(--mono);font-size:12px;margin-bottom:4px}
+.rcard p{font-size:11.5px;color:var(--mut);line-height:1.45}
+.rcard time{font-size:10px;color:var(--faint)}
+
+/* rodapé */
+.foot{grid-column:1/-1;display:flex;gap:10px}
+.agenda{flex:1;display:flex;gap:10px;padding:10px 14px;align-items:stretch}
+.ag{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
+.ag .d{font-family:var(--mono);font-size:11px;color:var(--amber);font-weight:600}
+.ag .e{font-size:12px;font-weight:600;margin:2px 0}
+.ag .i{font-size:10.5px;color:var(--faint)}
+</style>
+
+<div class="tape"><div class="tape-track" id="tape"></div></div>
+
+<div class="mbar">
+  <div><span class="mdate" id="mdate"></span></div>
+  <div class="mcenter">
+    <div class="mitem"><span class="lbl">IBOV</span><span class="v30 num" id="ib-p"></span><span class="arr">→</span><span class="v num" id="ib-v"></span><span class="c" id="ib-c"></span><svg id="ib-s"></svg></div>
+    <div class="mitem"><span class="lbl">USD/BRL</span><span class="v30 num" id="us-p"></span><span class="arr">→</span><span class="v num" id="us-v"></span><span class="c" id="us-c"></span><svg id="us-s"></svg></div>
+  </div>
+  <div class="mright">
+    <div class="mclock"><div class="v num" id="clock"></div><div class="st" id="mst"></div></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="left">
+    <div class="panel hero">
+      <span class="lbl">Carteira · valor atual</span>
+      <div class="hero-val num" id="pv"></div>
+      <div class="hero-sub">
+        <div><span class="lbl">P&amp;L total</span><span class="num" id="pl"></span></div>
+        <div><span class="lbl">P&amp;L hoje</span><span class="num" id="pld"></span></div>
+        <div><span class="lbl">Custo</span><span class="num" id="pc"></span></div>
+      </div>
+    </div>
+    <div class="panel pos" id="posPanel"></div>
+  </div>
+
+  <div class="panel center">
+    <div class="phead"><h2>Watchlist skacoes · variação do dia</h2><span class="pill" id="mkt"></span></div>
+    <div class="tmap" id="tmap"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--dn)"></span>queda</span>
+      <span><span class="sw" style="background:#2a3342"></span>estável</span>
+      <span><span class="sw" style="background:var(--up)"></span>alta</span>
+      <span><span class="sw" style="background:transparent;outline:2px solid var(--amber);outline-offset:-2px"></span>posição comprada</span>
+      <span style="margin-left:auto">passe o mouse para detalhes</span>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="panel">
+      <div class="phead"><h2>Movers do dia</h2><span class="pill">30d</span></div>
+      <div class="movers" id="movers"></div>
+    </div>
+    <div class="panel radar">
+      <div class="phead"><h2>Radar skacoes</h2><span class="pill" id="radar-run"></span></div>
+      <div class="radar-body">
+        <div class="rcard buy"><h3 class="up">ASAI3 · setup de reversão</h3><p>Rompeu a máxima dos últimos 5 pregões com volume acima da média. Candidata a swing se confirmar fechamento acima de 9,00.</p><time>hoje 15:45 · exemplo</time></div>
+        <div class="rcard"><h3>LREN3 · posição aberta</h3><p>Consolidando entre 14,50 e 15,00. Acima do teu preço de entrada; suporte relevante em 14,30.</p><time>hoje 15:45 · exemplo</time></div>
+        <div class="rcard warn"><h3 style="color:var(--amber)">MRVE3 · evitar</h3><p>Tendência de baixa intacta no diário apesar do repique. Sem setup válido pela regra de R/R mínimo.</p><time>hoje 15:45 · exemplo</time></div>
+        <div class="rcard"><h3>Este feed será alimentado pelo job das 15:45</h3><p>O mesmo run que manda o e-mail grava um JSON e o painel lê daqui. Conteúdo acima é ilustrativo.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel foot">
+    <div class="agenda">
+      <!--__AGENDA__-->
+    </div>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<script>
+/*__DATA__*/
+/*__OWNED__*/
+/*__RADAR__*/
+const fmt=(v,d=2)=>v.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=v=>(v>=0?'+':'')+fmt(v)+'%';
+const chg=t=>(D[t].p/D[t].pd-1)*100;
+const cls=v=>v>=0?'up':'dn',sig=v=>(v>=0?'+':'−')+fmt(Math.abs(v));
+
+/* sparkline genérico */
+function sparkSVG(h,{w=100,ht=30,ref=null,color=null,fill=false}={}){
+  const mn=Math.min(...h,ref??Infinity)*0.999, mx=Math.max(...h,ref??-Infinity)*1.001;
+  const X=i=>i/(h.length-1)*w, Y=v=>ht-1-(v-mn)/(mx-mn)*(ht-2);
+  const up=h[h.length-1]>=h[0];
+  const c=color||(up?'var(--up)':'var(--dn)');
+  const dim=c==='var(--dn)'?'var(--dn-dim)':'var(--up-dim)';
+  const pts=h.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  let s=`<svg viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none">`;
+  if(fill)s+=`<polygon points="0,${ht} ${pts} ${w},${ht}" fill="${dim}"/>`;
+  if(ref!=null)s+=`<line x1="0" x2="${w}" y1="${Y(ref)}" y2="${Y(ref)}" stroke="var(--amber)" stroke-dasharray="4 3" stroke-width="1"/>`;
+  s+=`<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  s+=`<circle cx="${X(h.length-1)}" cy="${Y(h[h.length-1])}" r="2.2" fill="${c}"/></svg>`;
+  return s;
+}
+
+/* tape — ordenado da maior queda pra maior alta */
+const tape=document.getElementById('tape');
+let th='';
+for(const t of Object.keys(D).sort((a,b)=>chg(a)-chg(b))){const c=chg(t);th+=`<span class="tk"><b>${t}</b><span>${fmt(D[t].p)}</span><span class="${c>=0?'up':'dn'}">${pct(c)}</span></span>`;}
+tape.innerHTML=th+th;
+
+/* market bar */
+function mkIdx(pref,d,dec){
+  const ago=d.h[0], c30=(d.p/ago-1)*100, cd=(d.p/d.pd-1)*100;
+  document.getElementById(pref+'-p').textContent=fmt(ago,dec);
+  const v=document.getElementById(pref+'-v');v.textContent=fmt(d.p,dec);v.className='v num '+cls(c30);
+  document.getElementById(pref+'-c').innerHTML=`<span class="${cls(c30)}">30d ${pct(c30)}</span> <span style="color:var(--faint)">·</span> <span class="${cls(cd)}">hoje ${pct(cd)}</span>`;
+  document.getElementById(pref+'-s').outerHTML=sparkSVG(d.h,{w:76,ht:26}).replace('<svg','<svg style="width:76px;height:26px"');
+}
+mkIdx('ib',IDX.IBOV,0);mkIdx('us',IDX.USDBRL,2);
+const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+function tick(){
+  const n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  document.getElementById('clock').textContent=n.toTimeString().slice(0,8);
+  document.getElementById('mdate').textContent=`${days[n.getDay()]}, ${n.toLocaleDateString('pt-BR')}`;
+  const mins=n.getHours()*60+n.getMinutes(), wd=n.getDay()>=1&&n.getDay()<=5;
+  const open=wd&&mins>=600&&mins<1020;
+  const st=document.getElementById('mst');
+  st.textContent=open?'pregão aberto':'pregão fechado';st.className='st '+(open?'open':'closed');
+}
+tick();setInterval(tick,1000);
+
+/* carteira — soma de todas as posições */
+const POS=Object.keys(OWNED);
+let cost=0,val=0,pld=0;
+for(const t of POS){const o=OWNED[t];cost+=o.q*o.e;val+=o.q*D[t].p;pld+=o.q*(D[t].p-D[t].pd);}
+const pl=val-cost;
+document.getElementById('pv').textContent='R$ '+fmt(val);
+document.getElementById('pc').textContent='R$ '+fmt(cost);
+const set=(id,txt,v)=>{const el=document.getElementById(id);el.textContent=txt;el.className='num '+cls(v)};
+set('pl',`${sig(pl)} (${pct(pl/cost*100)})`,pl);
+set('pld',`${sig(pld)} (${pct(pld/(val-pld)*100)})`,pld);
+
+/* card de posição — carrossel se houver mais de uma */
+let posIdx=0;
+function renderPos(){
+  const t=POS[posIdx],o=OWNED[t],d=D[t];
+  const pv=o.q*d.p,ppl=pv-o.q*o.e;
+  const c=(v,txt)=>`<span class="num ${cls(v)}">${txt}</span>`;
+  const dots=POS.length>1?`<div class="pos-dots">${POS.map((_,i)=>`<i class="${i===posIdx?'on':''}"></i>`).join('')}</div>`:'';
+  document.getElementById('posPanel').innerHTML=`<div class="pos-inner">
+    <div class="pos-top">
+      <div><span class="tkr">${t}</span><span class="tag">${o.tag||d.s}</span></div>
+      <span class="num ${cls(d.p-d.pd)}" style="font-size:18px;font-weight:700">${fmt(d.p)}</span>
+    </div>
+    <div class="pos-grid">
+      <div><span class="lbl">Qtd</span><span class="num">${o.q}</span></div>
+      <div><span class="lbl">Entrada</span><span class="num">${fmt(o.e)}</span></div>
+      <div><span class="lbl">Desde entrada</span>${c(d.p-o.e,pct((d.p/o.e-1)*100))}</div>
+      <div><span class="lbl">Hoje</span>${c(d.p-d.pd,pct((d.p/d.pd-1)*100))}</div>
+      <div><span class="lbl">Posição</span><span class="num">R$ ${fmt(pv)}</span></div>
+      <div><span class="lbl">P&amp;L</span>${c(ppl,sig(ppl))}</div>
+    </div>
+    ${sparkSVG(d.h,{w:300,ht:110,ref:o.e,fill:true,color:d.p>=o.e?'var(--up)':'var(--dn)'}).replace('<svg','<svg class="spark" style="width:100%;flex:1;min-height:110px"')}
+    <span class="entry-note">Linha <b>${fmt(o.e)}</b> = teu preço de entrada · últimos 30 pregões</span>
+    ${dots}</div>`;
+}
+renderPos();
+if(POS.length>1)setInterval(()=>{posIdx=(posIdx+1)%POS.length;renderPos()},5000);
+
+/* radar — carimbo HOJE/DIA ANTERIOR hh:mm */
+(function(){
+  const g=new Date(RADAR.generatedAt);
+  const dsem=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const stamp=dsem[g.getDay()]+' '+String(g.getHours()).padStart(2,'0')+':'+String(g.getMinutes()).padStart(2,'0');
+  document.getElementById('radar-run').textContent='último run: '+stamp;
+  const kc={buy:'buy',warn:'warn',info:''};
+  const hc={buy:'class="up"',warn:'style="color:var(--amber)"',info:''};
+  document.querySelector('.radar-body').innerHTML=RADAR.items.map(it=>
+    `<div class="rcard ${kc[it.kind]||''}"><h3 ${hc[it.kind]||''}>${it.t?it.t+' · ':''}${it.title}</h3><p>${it.body}</p><time>${stamp}</time></div>`).join('');
+})();
+
+/* treemap */
+const tiles=Object.keys(D).map(t=>({t,c:chg(t),w:1.2+Math.abs(chg(t))})).sort((a,b)=>b.c-a.c);
+const col=c=>{
+  const a=Math.min(Math.abs(c)/3,1);
+  if(Math.abs(c)<.15)return'#232c3a';
+  return c>0?`color-mix(in srgb,#2fbf8f ${25+a*75}%, #16241f)`:`color-mix(in srgb,#f06860 ${25+a*75}%, #241717)`;
+};
+const rows=[[],[],[],[]];
+tiles.forEach((x,i)=>rows[Math.floor(i/6)]?.push(x)||rows[3].push(x));
+document.getElementById('tmap').innerHTML=rows.filter(r=>r.length).map(r=>
+  `<div class="trow">${r.map(x=>`<div class="cell${OWNED[x.t]?' owned':''}" data-t="${x.t}" style="flex:${x.w.toFixed(2)};background:${col(x.c)}">
+    <span class="t">${x.t}</span><span class="c">${pct(x.c)}</span><span class="c" style="opacity:.55;font-size:10px">${D[x.t].s}</span></div>`).join('')}</div>`).join('');
+
+/* tooltip */
+const tip=document.getElementById('tip');
+document.getElementById('tmap').addEventListener('mousemove',ev=>{
+  const cell=ev.target.closest('.cell');
+  if(!cell){tip.style.display='none';return}
+  const t=cell.dataset.t,d=D[t],c=chg(t),m30=(d.p/d.h[0]-1)*100;
+  tip.innerHTML=`<div class="th"><span>${t}</span><span class="${cls(c)}">R$ ${fmt(d.p)}</span></div>
+    <div class="ts">${d.s} · hoje <span class="${cls(c)}">${pct(c)}</span> · 30d <span class="${cls(m30)}">${pct(m30)}</span></div>
+    ${sparkSVG(d.h,{w:180,ht:44,ref:OWNED[t]?.e})}
+    ${OWNED[t]?`<div class="tf">posição: ${OWNED[t].q} @ ${fmt(OWNED[t].e)} · linha âmbar = entrada</div>`:''}`;
+  tip.style.display='block';
+  const r=tip.getBoundingClientRect();
+  tip.style.left=Math.min(ev.clientX+16,innerWidth-r.width-10)+'px';
+  tip.style.top=Math.min(ev.clientY+14,innerHeight-r.height-10)+'px';
+});
+document.getElementById('tmap').addEventListener('mouseleave',()=>tip.style.display='none');
+
+/* movers com sparkline */
+const sorted=[...tiles].sort((a,b)=>b.c-a.c);
+const movers=[...sorted.slice(0,3),...sorted.slice(-3)];
+document.getElementById('movers').innerHTML=movers.map(x=>
+  `<div class="mrow"><b>${x.t}</b>${sparkSVG(D[x.t].h,{w:100,ht:20})}<span class="pr">${fmt(D[x.t].p)}</span><span class="ch ${cls(x.c)}">${pct(x.c)}</span></div>`).join('');
+document.getElementById('mkt').textContent='__BUILT__';
+</script>
