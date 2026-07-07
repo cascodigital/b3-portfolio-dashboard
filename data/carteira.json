@@ -1,9 +1,26 @@
 {
-  "_doc": "Posições reais da carteira. qtd e preco_entrada alimentam o P&L do painel.",
-  "atualizado": "2026-07-05",
+  "_doc": "Posições reais da carteira. qtd e preco_entrada alimentam o P&L do painel. Vendas encerradas vão para historico_vendas (com preco_saida) — o painel ignora, mas o dado fica pronto para um futuro bloco de P&L realizado. Carteira vazia (posicoes: []) é suportada: o painel mostra 'sem posição aberta'.",
+  "atualizado": "2026-07-07",
   "posicoes": [
-    {"ticker": "LREN3", "qtd": 400, "preco_entrada": 14.78},
-    {"ticker": "ITUB4", "qtd": 100, "preco_entrada": 31.20}
+    {
+      "ticker": "PETR4",
+      "qtd": 200,
+      "preco_entrada": 38.5
+    },
+    {
+      "ticker": "VALE3",
+      "qtd": 100,
+      "preco_entrada": 61.2
+    }
   ],
-  "historico_vendas": []
+  "historico_vendas": [
+    {
+      "ticker": "BBAS3",
+      "qtd": 300,
+      "preco_entrada": 26.1,
+      "preco_saida": 27.45,
+      "data_venda": "2026-06-15",
+      "obs": "alvo atingido"
+    }
+  ]
 }
