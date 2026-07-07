@@ -36,7 +36,26 @@ build.py  ──►  busca cotações (Yahoo Finance, sem token)
               (opcional) push via SSH pro Home Assistant
 ```
 
-O HTML final é estático e auto-contido — relógio e status de pregão rodam em JS ao vivo; cotações mudam a cada build.
+O HTML final é estático e auto-contido — relógio e status de pregão rodam em JS ao vivo; cotações mudam a cada build. A página **se recarrega sozinha a cada 5 minutos** pra pegar o build mais novo do servidor — essencial em TV/kiosk, onde ninguém aperta F5. Com o timer de 15 min, a latência máxima entre editar a carteira e ver na tela é ~20 min.
+
+## Carteira (`data/carteira.json`)
+
+```json
+{
+  "atualizado": "2026-07-07",
+  "posicoes": [
+    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50}
+  ],
+  "historico_vendas": [
+    {"ticker": "BBAS3", "qtd": 300, "preco_entrada": 26.10, "preco_saida": 27.45,
+     "data_venda": "2026-06-15", "obs": "alvo atingido"}
+  ]
+}
+```
+
+- `posicoes` — o que você tem agora; alimenta o carrossel de posição, o P&L e a borda âmbar no treemap. Ticker **sem** sufixo `.SA`. Ticker comprado fora da watchlist também é buscado.
+- `historico_vendas` — trades encerrados. O painel ainda não exibe (é o dado bruto pra um futuro bloco de P&L realizado), mas registre `preco_saida` sempre: sem ele o resultado do trade fica irrecuperável.
+- **Carteira vazia é suportada**: com `posicoes: []` o painel mostra "sem posição aberta · carteira 100% em caixa" e P&L "—" (nada de NaN nem tela quebrada).
 
 ## Opcionais
 
@@ -90,6 +109,7 @@ systemd/          service + timer de exemplo
 - Se mais da metade das cotações falhar, o build **aborta** sem sobrescrever o painel anterior.
 - Posição sem cotação disponível também aborta.
 - Radar indisponível cai pro cache (`data/radar.json`) — o painel nunca quebra, só fica velho.
+- Sem chamadas de IA, sem API paga, sem token: o ciclo inteiro é Yahoo Finance público + arquivos locais.
 
 ## ⚠️ Disclaimer
 
