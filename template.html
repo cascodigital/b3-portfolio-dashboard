@@ -242,6 +242,8 @@ function tick(){
   st.textContent=open?'pregão aberto':'pregão fechado';st.className='st '+(open?'open':'closed');
 }
 tick();setInterval(tick,1000);
+/* auto-reload: recarrega do servidor a cada 5min pra pegar o build novo (sem isso o kiosk mostra página velha pra sempre) */
+setTimeout(()=>location.reload(true),5*60*1000);
 
 /* carteira — soma de todas as posições */
 const POS=Object.keys(OWNED);
@@ -251,12 +253,16 @@ const pl=val-cost;
 document.getElementById('pv').textContent='R$ '+fmt(val);
 document.getElementById('pc').textContent='R$ '+fmt(cost);
 const set=(id,txt,v)=>{const el=document.getElementById(id);el.textContent=txt;el.className='num '+cls(v)};
-set('pl',`${sig(pl)} (${pct(pl/cost*100)})`,pl);
-set('pld',`${sig(pld)} (${pct(pld/(val-pld)*100)})`,pld);
+set('pl',cost?`${sig(pl)} (${pct(pl/cost*100)})`:'—',pl);
+set('pld',(val-pld)?`${sig(pld)} (${pct(pld/(val-pld)*100)})`:'—',pld);
 
 /* card de posição — carrossel se houver mais de uma */
 let posIdx=0;
 function renderPos(){
+  if(!POS.length){document.getElementById('posPanel').innerHTML=
+    '<div class="pos-inner" style="justify-content:center;align-items:center;text-align:center">'+
+    '<span class="lbl" style="font-size:13px">sem posição aberta</span>'+
+    '<span class="lbl" style="opacity:.5;margin-top:6px">carteira 100% em caixa</span></div>';return;}
   const t=POS[posIdx],o=OWNED[t],d=D[t];
   const pv=o.q*d.p,ppl=pv-o.q*o.e;
   const c=(v,txt)=>`<span class="num ${cls(v)}">${txt}</span>`;
