@@ -93,6 +93,17 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .legend{display:flex;gap:14px;align-items:center;padding:0 14px 10px;font-size:10px;color:var(--faint)}
 .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 
+/* banner mercado fechado */
+.mkban{display:none;margin:10px 10px 0;padding:9px 14px;border-radius:7px;align-items:center;gap:14px;flex:0 0 auto}
+.mkban.on{display:flex}
+.mkban .ico{font-size:20px}
+.mkban .t1{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.mkban .t2{font-size:11px;color:var(--mut);margin-top:2px}
+.mkban .cd{margin-left:auto;font-family:var(--mono);font-size:16px;font-weight:700}
+.mkban.after{background:#241d10;border:1px solid #4a3a18;color:var(--amber)}
+.mkban.wknd{background:#131a26;border:1px solid #263349;color:var(--cyan)}
+.mkban.on~.tmap{opacity:.85}
+
 /* tooltip */
 #tip{position:fixed;z-index:10;pointer-events:none;background:#0c1117;border:1px solid #2a3342;border-radius:7px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.55);display:none;min-width:190px}
 #tip .th{display:flex;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:2px}
@@ -156,6 +167,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 
   <div class="panel center">
     <div class="phead"><h2>Watchlist skacoes · variação do dia</h2><span class="pill" id="mkt"></span></div>
+    <div class="mkban" id="mkban"><span class="ico" id="mkban-ico"></span><div><div class="t1" id="mkban-t1"></div><div class="t2" id="mkban-t2"></div></div><span class="cd num" id="mkban-cd"></span></div>
     <div class="tmap" id="tmap"></div>
     <div class="legend">
       <span><span class="sw" style="background:var(--dn)"></span>queda</span>
@@ -232,14 +244,33 @@ function mkIdx(pref,d,dec){
 }
 mkIdx('ib',IDX.IBOV,0);mkIdx('us',IDX.USDBRL,2);
 const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+/* feriados B3 2026 (+ 01/01/2027) — atualizar na virada do ano */
+const FERIADOS=['2026-01-01','2026-02-16','2026-02-17','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-20','2026-12-25','2027-01-01'];
+const pad2=x=>String(x).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const isTrade=d=>d.getDay()>=1&&d.getDay()<=5&&!FERIADOS.includes(ymd(d));
 function tick(){
   const n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
   document.getElementById('clock').textContent=n.toTimeString().slice(0,8);
   document.getElementById('mdate').textContent=`${days[n.getDay()]}, ${n.toLocaleDateString('pt-BR')}`;
-  const mins=n.getHours()*60+n.getMinutes(), wd=n.getDay()>=1&&n.getDay()<=5;
-  const open=wd&&mins>=600&&mins<1020;
+  const mins=n.getHours()*60+n.getMinutes();
+  const open=isTrade(n)&&mins>=600&&mins<1020;
   const st=document.getElementById('mst');
   st.textContent=open?'pregão aberto':'pregão fechado';st.className='st '+(open?'open':'closed');
+  const ban=document.getElementById('mkban');
+  if(open){ban.className='mkban';return}
+  /* próxima abertura: hoje 10:00 se ainda for dia útil antes do pregão, senão próximo dia útil */
+  const nx=new Date(n);
+  if(!(isTrade(n)&&mins<600))do{nx.setDate(nx.getDate()+1)}while(!isTrade(nx));
+  nx.setHours(10,0,0,0);
+  const wknd=!isTrade(n);
+  const dsm=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const ms=nx-n,hh=Math.floor(ms/3.6e6),mm=Math.floor(ms%3.6e6/6e4);
+  document.getElementById('mkban-ico').textContent=wknd?'🌙':'⏸';
+  document.getElementById('mkban-t1').textContent=wknd?((n.getDay()===0||n.getDay()===6)?'FIM DE SEMANA — B3 FECHADA':'FERIADO — B3 FECHADA'):'MERCADO FECHADO';
+  document.getElementById('mkban-t2').textContent=`pregão volta ${dsm[nx.getDay()]} ${pad2(nx.getDate())}/${pad2(nx.getMonth()+1)} às 10:00 · dados: __BUILT__`;
+  document.getElementById('mkban-cd').textContent='abre em '+(hh>=24?Math.floor(hh/24)+'d '+(hh%24)+'h':hh+'h '+pad2(mm)+'m');
+  ban.className='mkban on '+(wknd?'wknd':'after');
 }
 tick();setInterval(tick,1000);
 /* auto-reload: recarrega do servidor a cada 5min pra pegar o build novo (sem isso o kiosk mostra página velha pra sempre) */
