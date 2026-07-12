@@ -78,6 +78,11 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .pos-grid .lbl{margin-bottom:2px}
 .pos-grid .num{font-size:14px;font-weight:600}
 .spark{flex:1;min-height:110px}
+.ts-tag{font-family:var(--mono);font-weight:700}
+.ts-tag.ts-ok{opacity:.75}
+.ts-tag.ts-warn{color:var(--amber)}
+.ts-tag.ts-out{color:#fff;background:var(--dn);padding:2px 6px;border-radius:4px;animation:tsblink 1.2s step-end infinite}
+@keyframes tsblink{50%{opacity:.45}}
 .entry-note{font-size:11px;color:var(--faint)}
 .entry-note b{color:var(--amber);font-family:var(--mono);font-weight:600}
 
@@ -85,11 +90,12 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .center{display:flex;flex-direction:column;gap:10px;min-height:0}
 .tmap{flex:1;display:flex;flex-direction:column;gap:3px;padding:10px;min-height:0}
 .trow{display:flex;gap:3px;flex:1;min-height:0}
-.cell{border-radius:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-width:0;overflow:hidden;padding:4px;cursor:default;transition:filter .12s}
+.cell{position:relative;border-radius:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-width:0;overflow:hidden;padding:4px;cursor:default;transition:filter .12s}
 .cell:hover{filter:brightness(1.3)}
 .cell .t{font-family:var(--mono);font-weight:700;font-size:13px}
 .cell .c{font-family:var(--mono);font-size:11px;opacity:.85}
-.cell.owned{outline:2px solid var(--amber);outline-offset:-2px}
+.cell.owned{outline:3px solid var(--amber);outline-offset:-3px;box-shadow:inset 0 0 18px rgba(245,184,65,.28),0 0 8px rgba(245,184,65,.45)}
+.position-mark{position:absolute;top:4px;left:5px;padding:2px 5px;border-radius:3px;background:var(--amber);color:#17120a;font-family:var(--mono);font-size:8px;font-weight:800;line-height:1;letter-spacing:.04em}
 .legend{display:flex;gap:14px;align-items:center;padding:0 14px 10px;font-size:10px;color:var(--faint)}
 .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 
@@ -278,6 +284,14 @@ setTimeout(()=>location.reload(true),5*60*1000);
 
 /* carteira — soma de todas as posições */
 const POS=Object.keys(OWNED);
+/* time stop: swing = 2-10 dias uteis; conta pregoes desde a entrada (dia da compra = D+0) */
+const TIME_STOP=10;
+const bizDays=ds=>{if(!ds)return null;const d=new Date(ds+'T12:00:00'),today=new Date();today.setHours(12,0,0,0);
+  let n=0;while(d<today){d.setDate(d.getDate()+1);if(isTrade(d))n++;}return n;};
+const tsBadge=o=>{const n=bizDays(o.d);if(n===null)return'';
+  const st=n>=TIME_STOP?'ts-out':n>=TIME_STOP-2?'ts-warn':'ts-ok';
+  const txt=n>=TIME_STOP?`D+${n} · TIME STOP`:`D+${n}/${TIME_STOP}`;
+  return`<span class="tag ts-tag ${st}">${txt}</span>`;};
 let cost=0,val=0,pld=0;
 for(const t of POS){const o=OWNED[t];cost+=o.q*o.e;val+=o.q*D[t].p;pld+=o.q*(D[t].p-D[t].pd);}
 const pl=val-cost;
@@ -300,7 +314,7 @@ function renderPos(){
   const dots=POS.length>1?`<div class="pos-dots">${POS.map((_,i)=>`<i class="${i===posIdx?'on':''}"></i>`).join('')}</div>`:'';
   document.getElementById('posPanel').innerHTML=`<div class="pos-inner">
     <div class="pos-top">
-      <div><span class="tkr">${t}</span><span class="tag">${o.tag||d.s}</span></div>
+      <div><span class="tkr">${t}</span><span class="tag">${o.tag||d.s}</span>${tsBadge(o)}</div>
       <span class="num ${cls(d.p-d.pd)}" style="font-size:18px;font-weight:700">${fmt(d.p)}</span>
     </div>
     <div class="pos-grid">
@@ -341,7 +355,7 @@ const rows=[[],[],[],[]];
 tiles.forEach((x,i)=>rows[Math.floor(i/6)]?.push(x)||rows[3].push(x));
 document.getElementById('tmap').innerHTML=rows.filter(r=>r.length).map(r=>
   `<div class="trow">${r.map(x=>`<div class="cell${OWNED[x.t]?' owned':''}" data-t="${x.t}" style="flex:${x.w.toFixed(2)};background:${col(x.c)}">
-    <span class="t">${x.t}</span><span class="c">${pct(x.c)}</span><span class="c" style="opacity:.55;font-size:10px">${D[x.t].s}</span></div>`).join('')}</div>`).join('');
+    ${OWNED[x.t]?'<span class="position-mark">COMPRADO</span>':''}<span class="t">${x.t}</span><span class="c">${pct(x.c)}</span><span class="c" style="opacity:.55;font-size:10px">${D[x.t].s}</span></div>`).join('')}</div>`).join('');
 
 /* tooltip */
 const tip=document.getElementById('tip');
