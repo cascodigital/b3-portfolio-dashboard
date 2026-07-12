@@ -95,6 +95,9 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .cell .t{font-family:var(--mono);font-weight:700;font-size:13px}
 .cell .c{font-family:var(--mono);font-size:11px;opacity:.85}
 .cell.owned{outline:3px solid var(--amber);outline-offset:-3px;box-shadow:inset 0 0 18px rgba(245,184,65,.28),0 0 8px rgba(245,184,65,.45)}
+.days-mark{position:absolute;bottom:4px;right:5px;padding:2px 5px;border-radius:3px;background:rgba(0,0,0,.45);color:#fff;font-family:var(--mono);font-size:9px;font-weight:800;line-height:1;letter-spacing:.04em}
+.days-mark.dm-warn{background:var(--amber);color:#17120a}
+.days-mark.dm-out{background:var(--dn);color:#fff;animation:tsblink 1.2s step-end infinite}
 .position-mark{position:absolute;top:4px;left:5px;padding:2px 5px;border-radius:3px;background:var(--amber);color:#17120a;font-family:var(--mono);font-size:8px;font-weight:800;line-height:1;letter-spacing:.04em}
 .legend{display:flex;gap:14px;align-items:center;padding:0 14px 10px;font-size:10px;color:var(--faint)}
 .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
@@ -292,6 +295,11 @@ const tsBadge=o=>{const n=bizDays(o.d);if(n===null)return'';
   const st=n>=TIME_STOP?'ts-out':n>=TIME_STOP-2?'ts-warn':'ts-ok';
   const txt=n>=TIME_STOP?`D+${n} · TIME STOP`:`D+${n}/${TIME_STOP}`;
   return`<span class="tag ts-tag ${st}">${txt}</span>`;};
+/* marca no treemap: pregoes que FALTAM ate rever a posicao (time stop) */
+const daysMark=o=>{const n=bizDays(o.d);if(n===null)return'';
+  const left=TIME_STOP-n;
+  if(left<=0)return'<span class="days-mark dm-out">REVER</span>';
+  return`<span class="days-mark${left<=2?' dm-warn':''}">${left}d</span>`;};
 let cost=0,val=0,pld=0;
 for(const t of POS){const o=OWNED[t];cost+=o.q*o.e;val+=o.q*D[t].p;pld+=o.q*(D[t].p-D[t].pd);}
 const pl=val-cost;
@@ -355,7 +363,7 @@ const rows=[[],[],[],[]];
 tiles.forEach((x,i)=>rows[Math.floor(i/6)]?.push(x)||rows[3].push(x));
 document.getElementById('tmap').innerHTML=rows.filter(r=>r.length).map(r=>
   `<div class="trow">${r.map(x=>`<div class="cell${OWNED[x.t]?' owned':''}" data-t="${x.t}" style="flex:${x.w.toFixed(2)};background:${col(x.c)}">
-    ${OWNED[x.t]?'<span class="position-mark">COMPRADO</span>':''}<span class="t">${x.t}</span><span class="c">${pct(x.c)}</span><span class="c" style="opacity:.55;font-size:10px">${D[x.t].s}</span></div>`).join('')}</div>`).join('');
+    ${OWNED[x.t]?`<span class="position-mark">COMPRADO</span>${daysMark(OWNED[x.t])}`:''}<span class="t">${x.t}</span><span class="c">${pct(x.c)}</span><span class="c" style="opacity:.55;font-size:10px">${D[x.t].s}</span></div>`).join('')}</div>`).join('');
 
 /* tooltip */
 const tip=document.getElementById('tip');
