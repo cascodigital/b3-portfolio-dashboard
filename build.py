@@ -18,8 +18,33 @@ Variáveis de ambiente (todas opcionais):
   PAINEL_SSH_PATH   path remoto (default: /config/www/painel-acoes.html)
 """
 import json, os, re, subprocess, sys, urllib.request
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
+
+
+def pascoa(ano):
+    """Domingo de Páscoa (algoritmo de Gauss/Meeus, calendário gregoriano)."""
+    a, b, c = ano % 19, ano // 100, ano % 100
+    d, e = b // 4, b % 4
+    g = (8 * b + 13) // 25
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    mes = (h + l - 7 * m + 114) // 31
+    dia = ((h + l - 7 * m + 114) % 31) + 1
+    return date(ano, mes, dia)
+
+
+def feriados_b3(ano):
+    """Feriados B3 (sem pregão): fixos + móveis derivados da Páscoa + vésperas de fim de ano."""
+    p = pascoa(ano)
+    movel = [p - timedelta(days=48), p - timedelta(days=47),  # Carnaval seg/ter
+             p - timedelta(days=2),                           # Sexta-feira Santa
+             p + timedelta(days=60)]                          # Corpus Christi
+    fixo = [(1, 1), (4, 21), (5, 1), (9, 7), (10, 12), (11, 2), (11, 15),
+            (11, 20), (12, 24), (12, 25), (12, 31)]
+    return sorted(d.isoformat() for d in movel + [date(ano, m, dd) for m, dd in fixo])
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get('PAINEL_DATA_DIR', f'{BASE}/data')
@@ -172,6 +197,9 @@ def main():
     built = f'atualizado {dias[now.weekday()]} {now:%H:%M}'
 
     html = open(f'{BASE}/template.html').read()
+    fer = feriados_b3(now.year) + feriados_b3(now.year + 1)
+    html = re.sub(r'const FERIADOS=\[[^\]]*\];',
+                  'const FERIADOS=' + json.dumps(fer) + ';', html)
     html = html.replace('/*__DATA__*/', 'const D=' + json.dumps(D, ensure_ascii=False)
                         + ';\nconst IDX=' + json.dumps(IDX) + ';\n')
     html = html.replace('/*__OWNED__*/', 'const OWNED=' + json.dumps(owned, ensure_ascii=False) + ';')
