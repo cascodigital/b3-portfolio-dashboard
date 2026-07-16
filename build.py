@@ -162,7 +162,9 @@ def fetch(sym, rng='3mo'):
 
 def main():
     cart = json.load(open(f'{DATA}/carteira.json'))
-    owned = {p['ticker']: {'q': p['qtd'], 'e': p['preco_entrada'], 'd': p.get('data_compra', '')} for p in cart['posicoes']}
+    owned = {p['ticker']: {'q': p['qtd'], 'e': p['preco_entrada'], 'd': p.get('data_compra', ''),
+                           **({'sh': 1} if p.get('lado') == 'short' else {})}
+             for p in cart['posicoes']}
 
     tickers = [l.strip().replace('.SA', '') for l in open(f'{DATA}/acoes.txt') if l.strip()]
     for t in owned:
