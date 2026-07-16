@@ -1,5 +1,5 @@
 {
-  "_doc": "Posições reais da carteira. qtd e preco_entrada alimentam o P&L do painel. Vendas encerradas vão para historico_vendas (com preco_saida) — o painel ignora, mas o dado fica pronto para um futuro bloco de P&L realizado. Carteira vazia (posicoes: []) é suportada: o painel mostra 'sem posição aberta'.",
+  "_doc": "Posições abertas long e short. lado ausente significa long; use lado=short em venda a descoberto. qtd e preco_entrada alimentam o P&L pelo lado correto. Trades encerrados vão para historico_vendas (com preco_saida). Carteira vazia (posicoes: []) é suportada.",
   "atualizado": "2026-07-07",
   "posicoes": [
     {
