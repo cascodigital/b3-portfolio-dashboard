@@ -160,11 +160,41 @@ def fetch(sym, rng='3mo'):
     return d['meta']['regularMarketPrice'], closes
 
 
+def parse_oco(position):
+    """Return explicit OCO price levels, including the legacy human-readable obs field."""
+    def number(value):
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return round(float(value), 2)
+        value = str(value).strip().replace('R$', '').replace(' ', '')
+        if ',' in value:
+            value = value.replace('.', '').replace(',', '.')
+        return round(float(value), 2)
+
+    stop = position.get('stop_loss', position.get('stop'))
+    target = position.get('alvo', position.get('take_profit'))
+    obs = position.get('obs', '')
+    if stop is None:
+        match = re.search(r'\bstop(?:\s+loss)?\s*R\$?\s*([\d.,]+)', obs, re.I)
+        stop = match.group(1) if match else None
+    if target is None:
+        match = re.search(r'\balvo\s*R\$?\s*([\d.,]+)', obs, re.I)
+        target = match.group(1) if match else None
+    return number(stop), number(target)
+
+
 def main():
     cart = json.load(open(f'{DATA}/carteira.json'))
-    owned = {p['ticker']: {'q': p['qtd'], 'e': p['preco_entrada'], 'd': p.get('data_compra', ''),
-                           **({'sh': 1} if p.get('lado') == 'short' else {})}
-             for p in cart['posicoes']}
+    owned = {}
+    for p in cart['posicoes']:
+        stop, target = parse_oco(p)
+        owned[p['ticker']] = {
+            'q': p['qtd'], 'e': p['preco_entrada'], 'd': p.get('data_compra', ''),
+            **({'sl': stop} if stop is not None else {}),
+            **({'tp': target} if target is not None else {}),
+            **({'sh': 1} if p.get('lado') == 'short' else {}),
+        }
 
     tickers = [l.strip().replace('.SA', '') for l in open(f'{DATA}/acoes.txt') if l.strip()]
     for t in owned:

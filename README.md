@@ -44,7 +44,8 @@ O HTML final é estático e auto-contido — relógio e status de pregão rodam 
 {
   "atualizado": "2026-07-07",
   "posicoes": [
-    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50},
+    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50,
+     "obs": "OCO: stop R$36,58 (-5,0%) / alvo R$41,58 (+8,0%)"},
     {"ticker": "ABEV3", "lado": "short", "qtd": 100, "preco_entrada": 15.20}
   ],
   "historico_vendas": [
@@ -55,6 +56,7 @@ O HTML final é estático e auto-contido — relógio e status de pregão rodam 
 ```
 
 - `posicoes` — posições abertas long e short; alimentam o carrossel, o P&L e a marcação no treemap. `lado` ausente significa `long`; use `"lado": "short"` em venda a descoberto. No short, queda é lucro e alta é prejuízo. Ticker **sem** sufixo `.SA`; posição fora da watchlist também é buscada.
+- O gráfico da posição mostra o ticker no centro. Quando houver OCO, desenha alvo verde (`GAIN`), entrada amarela (`ENTRADA`) e stop vermelho (`LOSS`). O builder aceita o formato textual do exemplo em `obs` e também os campos estruturados `stop_loss`/`stop` e `alvo`/`take_profit`; sem OCO, exibe somente a entrada.
 - `historico_vendas` — trades encerrados. O painel ainda não exibe (é o dado bruto pra um futuro bloco de P&L realizado), mas registre `preco_saida` sempre: sem ele o resultado do trade fica irrecuperável.
 - **Carteira vazia é suportada**: com `posicoes: []` o painel mostra "sem posição aberta · carteira 100% em caixa" e P&L "—" (nada de NaN nem tela quebrada).
 
