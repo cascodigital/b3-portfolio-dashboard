@@ -1,2 +1,5 @@
 painel-acoes.html
 data/radar.json
+data/carteira.json
+__pycache__/
+*.pyc

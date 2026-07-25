@@ -78,6 +78,9 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .pos-grid .lbl{margin-bottom:2px}
 .pos-grid .num{font-size:14px;font-weight:600}
 .spark{flex:1;min-height:110px}
+.spark-wrap{position:relative;flex:1;min-height:110px}
+.spark-wrap .spark{position:absolute;inset:0;width:100%;height:100%}
+.spark-label{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;color:rgba(255,255,255,.72);text-shadow:0 1px 5px #000,0 0 2px #000;font-family:var(--mono);font-size:24px;font-weight:800;letter-spacing:.12em}
 .ts-tag{font-family:var(--mono);font-weight:700}
 .ts-tag.ts-ok{opacity:.75}
 .ts-tag.ts-warn{color:var(--amber)}
@@ -85,6 +88,8 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 @keyframes tsblink{50%{opacity:.45}}
 .entry-note{font-size:11px;color:var(--faint)}
 .entry-note b{color:var(--amber);font-family:var(--mono);font-weight:600}
+.entry-note .gain{color:var(--up)}
+.entry-note .loss{color:var(--dn)}
 
 /* treemap centro */
 .center{display:flex;flex-direction:column;gap:10px;min-height:0}
@@ -227,8 +232,10 @@ const chg=t=>(D[t].p/D[t].pd-1)*100;
 const cls=v=>v>=0?'up':'dn',sig=v=>(v>=0?'+':'−')+fmt(Math.abs(v));
 
 /* sparkline genérico */
-function sparkSVG(h,{w=100,ht=30,ref=null,color=null,fill=false}={}){
-  const mn=Math.min(...h,ref??Infinity)*0.999, mx=Math.max(...h,ref??-Infinity)*1.001;
+function sparkSVG(h,{w=100,ht=30,ref=null,refs=null,color=null,fill=false}={}){
+  const levels=refs||(ref!=null?[{value:ref,color:'var(--amber)',dash:'4 3'}]:[]);
+  const levelValues=levels.map(x=>x.value).filter(Number.isFinite);
+  const mn=Math.min(...h,...levelValues)*0.999, mx=Math.max(...h,...levelValues)*1.001;
   const X=i=>i/(h.length-1)*w, Y=v=>ht-1-(v-mn)/(mx-mn)*(ht-2);
   const up=h[h.length-1]>=h[0];
   const c=color||(up?'var(--up)':'var(--dn)');
@@ -236,10 +243,9 @@ function sparkSVG(h,{w=100,ht=30,ref=null,color=null,fill=false}={}){
   const pts=h.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
   let s=`<svg viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none">`;
   if(fill)s+=`<polygon points="0,${ht} ${pts} ${w},${ht}" fill="${dim}"/>`;
-  if(ref!=null)s+=`<line x1="0" x2="${w}" y1="${Y(ref)}" y2="${Y(ref)}" stroke="var(--amber)" stroke-dasharray="4 3" stroke-width="1"/>`;
+  for(const level of levels){if(Number.isFinite(level.value))s+=`<line x1="0" x2="${w}" y1="${Y(level.value)}" y2="${Y(level.value)}" stroke="${level.color}" stroke-dasharray="${level.dash||'4 3'}" stroke-width="${level.width||1.2}"/>`;}
   s+=`<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6" stroke-linejoin="round"/>`;
-  s+=`<circle cx="${X(h.length-1)}" cy="${Y(h[h.length-1])}" r="2.2" fill="${c}"/></svg>`;
-  return s;
+  return s+`<circle cx="${X(h.length-1)}" cy="${Y(h[h.length-1])}" r="2.2" fill="${c}"/></svg>`;
 }
 
 /* tape — ordenado da maior queda pra maior alta */
@@ -325,6 +331,9 @@ function renderPos(){
   const t=POS[posIdx],o=OWNED[t],d=D[t];
   const s=sgn(o),pv=o.q*d.p,ppl=s*o.q*(d.p-o.e);
   const c=(v,txt)=>`<span class="num ${cls(v)}">${txt}</span>`;
+  const levels=[{value:o.e,color:'var(--amber)',dash:'4 3'}];
+  if(Number.isFinite(o.tp))levels.push({value:o.tp,color:'var(--up)',dash:'5 3'});
+  if(Number.isFinite(o.sl))levels.push({value:o.sl,color:'var(--dn)',dash:'5 3'});
   const dots=POS.length>1?`<div class="pos-dots">${POS.map((_,i)=>`<i class="${i===posIdx?'on':''}"></i>`).join('')}</div>`:'';
   const shBadge=o.sh?'<span class="tag short-tag">▼ VENDIDO</span>':'';
   document.getElementById('posPanel').innerHTML=`<div class="pos-inner${o.sh?' short-pos':''}">
@@ -340,8 +349,8 @@ function renderPos(){
       <div><span class="lbl">Posição</span><span class="num">R$ ${fmt(pv)}</span></div>
       <div><span class="lbl">P&amp;L</span>${c(ppl,sig(ppl))}</div>
     </div>
-    ${sparkSVG(d.h,{w:300,ht:110,ref:o.e,fill:true,color:ppl>=0?'var(--up)':'var(--dn)'}).replace('<svg','<svg class="spark" style="width:100%;flex:1;min-height:110px"')}
-    <span class="entry-note">Linha <b>${fmt(o.e)}</b> = ${o.sh?'teu preço de <b>venda</b> — abaixo dela = lucro':'teu preço de entrada'} · últimos 30 pregões</span>
+    <div class="spark-wrap">${sparkSVG(d.h,{w:300,ht:110,refs:levels,fill:true,color:ppl>=0?'var(--up)':'var(--dn)'}).replace('<svg','<svg class="spark"')}<span class="spark-label">${t}</span></div>
+    <span class="entry-note">${Number.isFinite(o.tp)?`<b class="gain">GAIN ${fmt(o.tp)}</b> · `:''}<b>ENTRADA ${fmt(o.e)}</b>${Number.isFinite(o.sl)?` · <b class="loss">LOSS ${fmt(o.sl)}</b>`:''} · últimos 30 pregões</span>
     ${dots}</div>`;
 }
 renderPos();
