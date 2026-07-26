@@ -12,7 +12,7 @@ Dashboard dark de carteira B3 pensado pra ficar aberto numa tela dedicada (TV, k
 git clone https://github.com/cascodigital/b3-portfolio-dashboard
 cd b3-portfolio-dashboard
 
-# 1. sua carteira: edite data/carteira.json (ticker, qtd, preço de entrada)
+# 1. sua carteira: edite data/carteira.json (ticker, qtd, entrada e, se tiver, stop/alvo)
 # 2. sua watchlist: edite data/acoes.txt (um ticker B3 por linha)
 
 python3 build.py --no-push
@@ -37,6 +37,26 @@ build.py  ──►  busca cotações (Yahoo Finance, sem token)
 ```
 
 O HTML final é estático e auto-contido — relógio e status de pregão rodam em JS ao vivo; cotações mudam a cada build. A página **se recarrega sozinha a cada 5 minutos** pra pegar o build mais novo do servidor — essencial em TV/kiosk, onde ninguém aperta F5. Com o timer de 15 min, a latência máxima entre editar a carteira e ver na tela é ~20 min.
+
+## Como ler a tela
+
+**Cockpit** (topo) — três blocos: carteira (valor, P&L total, P&L do dia, custo), exposição (posições a mercado sobre o capital, com gauge medido contra o teto de 80% da estratégia, contador de posições, caixa e teto livre) e o índice (valor, dia, 30 pregões, dólar e gráfico de 120 pregões).
+
+**Mesa de operação** (centro) — até 6 cards, posições primeiro e candidatas do radar depois, cada um com 30 pregões e os níveis desenhados. A grade se ajusta à quantidade e o último card estica pra não deixar buraco na linha final.
+
+| | Posição | Candidata do radar |
+|---|---|---|
+| Borda | âmbar | azul |
+| Badge | `COMPRADO D+N`, `VENDIDO`, `TIME STOP` | `OBSERVAR`, `COMPRA` |
+| Barra | stop → alvo, traço branco = preço agora, traço cinza = entrada | aproximação até o gatilho |
+| Rótulo | `N% do alvo` | `falta ±X%` ou `NO GATILHO` |
+| Rodapé | `LOSS`/`GAIN` com a distância até cada nível | setor e o nível a romper/recuar |
+
+Por que 30 pregões: com time stop de 10, a operação ocupa o último terço do desenho e o resto é a estrutura que justificou a entrada. Encurtar a janela **piora** — o eixo é travado por stop e alvo, então uma série mais curta ocupa uma fração menor dele e fica mais achatada.
+
+**Watchlist** (rodapé) — todos os tickers ordenados por força relativa de 30 pregões contra o índice, `●` marcando posição aberta. É acompanhamento, não decisão: por isso é uma faixa de texto e não um treemap ocupando meia tela.
+
+**Privacidade** — `MASK_PRIVATE_VALUES` no topo do `<script>` do `template.html`. Em `true`, some com todo valor em reais (patrimônio, custo, P&L monetário, preços de entrada e OCO) e mantém só percentuais e quantidades — útil em tela que fica ligada num ambiente compartilhado. O screenshot acima está com a máscara ligada.
 
 ## Carteira (`data/carteira.json`)
 
@@ -93,21 +113,32 @@ systemctl --user enable --now painel-acoes.timer
 
 ### Radar (opcional)
 
-O quadro "radar" exibe picks de uma análise diária externa. Se você tem algum job que gera um HTML de análise, aponte `RADAR_HTML_FILE` pra ele e adapte `parse_radar()` ao seu formato — ou simplesmente edite `data/radar.json` na mão:
+O radar alimenta duas coisas: o quadro de texto na coluna direita **e** os cards de candidata da mesa. Se você tem um job que gera um HTML de análise diária, aponte `RADAR_HTML_FILE` pra ele e adapte um dos parsers ao seu formato — ou edite `data/radar.json` na mão:
 
 ```json
-{"generatedAt": "2026-07-05T15:45", "items": [
-  {"t": "LREN3", "kind": "buy", "title": "1º — COMPRA", "body": "R$ 15,20 · Alvo +6% · Stop -3%"}
+{"generatedAt": "2026-07-26T15:45", "items": [
+  {"t": "LREN3", "kind": "buy", "title": "1º — COMPRA", "body": "R$ 15,20 · Alvo +6% · Stop -3%",
+   "ref": 15.20, "tp": 16.11, "sl": 14.74},
+  {"t": "WEGE3", "kind": "info", "title": "2º — OBSERVAR", "body": "R$ 45,57 · Gatilho: fechar acima de 45,65",
+   "ref": 45.57, "tg": 45.65, "td": "up"}
 ]}
 ```
 
-`kind`: `buy` (verde), `warn` (âmbar), `info` (neutro). Sem radar configurado, o quadro mostra um aviso e o painel funciona normal.
+- `kind` — `buy` (verde), `warn` (âmbar), `info` (neutro). Define só a cor no quadro de texto.
+- **Campos numéricos são o que gera o card na mesa.** Sem nenhum deles, o pick aparece só no texto.
+  - `ref` — preço no momento da análise; vira a barra de desvio quando não há mais nada;
+  - `tg` + `td` — preço do gatilho e direção: `up` dispara rompendo pra cima, `down` dispara recuando até o nível. **A direção importa**: sem ela, um gatilho de recuo é lido como já atingido só porque o preço está acima;
+  - `sl` / `tp` — stop e alvo; com os dois, o card ganha a barra completa stop→alvo.
+- O build traz dois parsers de HTML (`parse_radar_v2` e o `parse_radar` legado) escritos contra formatos de e-mail específicos. Ele tenta o v2, cai no legado, e se ambos falharem usa o cache. **Isso falha em silêncio**: o painel continua bonito servindo dados velhos. Confira o carimbo "último run" no quadro do radar — se ele parar de acompanhar a data, seu parser quebrou.
+
+Sem radar configurado, o quadro mostra um aviso e o painel funciona normal.
 
 ## Arquivos
 
 ```
 build.py          gerador (stdlib only)
 template.html     visual — edite aqui pra mudar o layout
+check.js          valida o painel gerado sem browser (node check.js painel-acoes.html)
 events.json       eventos datados; Focus/Payroll são calculados
 data/             watchlist + carteira (exemplos incluídos)
 systemd/          service + timer de exemplo
@@ -119,6 +150,7 @@ systemd/          service + timer de exemplo
 - Posição sem cotação disponível também aborta.
 - Radar indisponível cai pro cache (`data/radar.json`) — o painel nunca quebra, só fica velho.
 - Sem chamadas de IA, sem API paga, sem token: o ciclo inteiro é Yahoo Finance público + arquivos locais.
+- **Ao editar o `template.html`, valide antes de publicar**: um erro de JS deixa a tela em branco sem aviso nenhum. Com browser: `google-chrome --headless=new --dump-dom painel-acoes.html 2>&1 | grep -i error`. Sem browser: `node check.js painel-acoes.html`, que executa o script do painel num DOM mínimo e reporta o erro com stack, mais o HTML que cada bloco gerou.
 
 ## ⚠️ Disclaimer
 
