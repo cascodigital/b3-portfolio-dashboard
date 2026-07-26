@@ -1,6 +1,6 @@
 # 📈 Painel de Ações B3 — Dashboard 1080p pra TV / Home Assistant
 
-Dashboard dark de carteira B3 pensado pra ficar aberto numa tela dedicada (TV, kiosk, painel do Home Assistant): treemap da watchlist, carrossel de posições com P&L real, IBOV/USDBRL com sparkline, radar de análise diária e agenda econômica.
+Dashboard dark de carteira B3 pensado pra ficar aberto numa tela dedicada (TV, kiosk, painel do Home Assistant). A tela mostra só o que exige decisão: um **cockpit** com carteira, exposição contra o teto da estratégia e o índice em 120 pregões; uma **mesa de operação** com um card por posição ou candidata, cada uma com 30 pregões e os níveis de OCO desenhados; radar de análise diária e agenda econômica. A watchlist inteira fica numa faixa de texto no rodapé, ordenada por força relativa contra o índice — acompanhamento não ocupa espaço de decisão.
 
 É a evolução do antigo visualizador Dash/Plotly deste repo — agora **zero dependências**: um script Python (só stdlib) gera um **HTML auto-contido** a partir de um template. Sem servidor, sem pip install, sem container.
 
@@ -25,7 +25,7 @@ Só isso. Requisito único: Python 3.9+. Tudo abaixo desta linha é **opcional**
 
 ```
 data/acoes.txt        watchlist (tickers B3)
-data/carteira.json    posições reais (qtd + preço de entrada)
+data/carteira.json    posições reais (qtd, entrada, OCO) + capital e caixa
 events.json           eventos datados (Copom, IPCA, earnings)
 template.html         visual — HTML/CSS/JS com placeholders
         │
@@ -42,11 +42,15 @@ O HTML final é estático e auto-contido — relógio e status de pregão rodam 
 
 ```json
 {
-  "atualizado": "2026-07-07",
+  "atualizado": "2026-07-26",
+  "capital_operacional": 50000.00,
+  "caixa_operacional": 38500.00,
+  "teto_posicoes": 8,
   "posicoes": [
-    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50,
-     "obs": "OCO: stop R$36,58 (-5,0%) / alvo R$41,58 (+8,0%)"},
-    {"ticker": "ABEV3", "lado": "short", "qtd": 100, "preco_entrada": 15.20}
+    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50, "data_compra": "2026-07-20",
+     "stop_loss": 36.58, "alvo": 41.58},
+    {"ticker": "ABEV3", "lado": "short", "qtd": 100, "preco_entrada": 15.20,
+     "data_compra": "2026-07-22", "stop_loss": 16.05, "alvo": 14.10}
   ],
   "historico_vendas": [
     {"ticker": "BBAS3", "qtd": 300, "preco_entrada": 26.10, "preco_saida": 27.45,
@@ -55,10 +59,12 @@ O HTML final é estático e auto-contido — relógio e status de pregão rodam 
 }
 ```
 
-- `posicoes` — posições abertas long e short; alimentam o carrossel, o P&L e a marcação no treemap. `lado` ausente significa `long`; use `"lado": "short"` em venda a descoberto. No short, queda é lucro e alta é prejuízo. Ticker **sem** sufixo `.SA`; posição fora da watchlist também é buscada.
-- O gráfico da posição mostra o ticker no centro. Quando houver OCO, desenha alvo verde (`GAIN`), entrada amarela (`ENTRADA`) e stop vermelho (`LOSS`). O builder aceita o formato textual do exemplo em `obs` e também os campos estruturados `stop_loss`/`stop` e `alvo`/`take_profit`; sem OCO, exibe somente a entrada.
+- `posicoes` — posições abertas long e short; cada uma vira um card na mesa e entra no P&L e na exposição. `lado` ausente significa `long`; use `"lado": "short"` em venda a descoberto. No short, queda é lucro e alta é prejuízo. Ticker **sem** sufixo `.SA`; posição fora da watchlist também é buscada.
+- **OCO dentro da posição** — `stop_loss` e `alvo` são campos numéricos do próprio objeto, então nascem e morrem com a posição: encerrou o trade, removeu o objeto, o OCO some junto. Não existe arquivo nem lista separada de OCO. Aliases aceitos: `stop`/`take_profit`. O formato legado com os níveis embutidos na string `obs` (`"OCO: stop R$36,58 / alvo R$41,58"`) continua sendo entendido, mas não use em registro novo — `obs` é texto livre.
+- O card da posição desenha 30 pregões com alvo verde, entrada âmbar e stop vermelho, e uma barra de progresso **stop → alvo**: extremidade esquerda é o stop, direita é o alvo, traço branco é o preço agora, traço cinza é a entrada. O rótulo `N% do alvo` é a posição do traço branco nesse trajeto. Sem OCO, o card cai pra uma barra de desvio desde a entrada.
+- `capital_operacional` e `caixa_operacional` alimentam o bloco de exposição do cockpit (posições a mercado sobre o capital, medido contra o teto de 80%). `teto_posicoes` (default 8) é só o denominador do contador `N / teto`. Ausentes, o bloco mostra `—`.
 - `historico_vendas` — trades encerrados. O painel ainda não exibe (é o dado bruto pra um futuro bloco de P&L realizado), mas registre `preco_saida` sempre: sem ele o resultado do trade fica irrecuperável.
-- **Carteira vazia é suportada**: com `posicoes: []` o painel mostra "sem posição aberta · carteira 100% em caixa" e P&L "—" (nada de NaN nem tela quebrada).
+- **Carteira vazia é suportada**: com `posicoes: []` a mesa mostra só as candidatas do radar (ou um aviso de mesa vazia) e o P&L fica em "—" — nada de NaN nem tela quebrada.
 
 ## Opcionais
 

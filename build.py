@@ -73,6 +73,89 @@ def strip_tags(s):
     return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', s)).strip()
 
 
+def brl(s):
+    """'R$13,97' -> 13.97 (None se não parsear)."""
+    if s is None:
+        return None
+    s = str(s).replace('R$', '').replace(' ', '').strip()
+    if ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    try:
+        return round(float(s), 2)
+    except ValueError:
+        return None
+
+
+def pnum(s):
+    """'−4,3%' / '+2,6%' -> -4.3 / 2.6 (None se não parsear)."""
+    if s is None:
+        return None
+    s = s.replace('%', '').replace('−', '-').replace('+', '').replace(' ', '').replace(',', '.')
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def trigger_price(txt):
+    """Preço do gatilho + direção ('fechando acima de 45,65' -> up; 'recuar ao (40,65)' -> down).
+
+    A direção importa: gatilho de rompimento dispara quando o preço SOBE até o nível,
+    gatilho de repricing/recuo dispara quando CAI até ele.
+    """
+    m = re.search(r'acima (?:de|do|da)\s*(?:[\d.,]+%\s*)?\(?(\d{1,4},\d{2})\)?', txt)
+    if m:
+        return brl(m.group(1)), 'up'
+    m = re.search(r'(?:recuar|abaixo|cair|voltar)\s*(?:a|ao|à|de|do|da|para)?\s*'
+                  r'(?:[\d.,]+%\s*)?\(?(\d{1,4},\d{2})\)?', txt)
+    if m:
+        return brl(m.group(1)), 'down'
+    m = re.search(r'\((\d{1,4},\d{2})\)', txt)  # nível fib solto entre parênteses
+    return (brl(m.group(1)), 'up') if m else (None, None)
+
+
+def parse_radar_v2(html, gen_dt):
+    """Template do e-mail a partir de 24/07/2026: ranking em <strong>Nº TICKER</strong>."""
+    items = []
+    m = re.search(r'BOVA11\s*—\s*Modo Operacional:\s*(?:<[^>]+>\s*)?([A-Z]+)'
+                  r'.*?</div>\s*<div[^>]*>(.*?)</div>', html, re.S)
+    if m:
+        modo = m.group(1).strip()
+        items.append({'t': 'BOVA11', 'kind': 'info' if modo == 'NORMAL' else 'warn',
+                      'title': f'Modo {modo}', 'body': strip_tags(m.group(2))[:260]})
+    blocks = re.split(r'(?=<strong>\dº\s+[A-Z0-9]{4,6}</strong>)', html)
+    for b in blocks[1:]:
+        h = re.match(r'<strong>(\d)º\s+([A-Z0-9]{4,6})</strong>\s*·\s*(R\$\s*[\d.,]+)\s*·\s*([^·<]*)',
+                     b)
+        if not h:
+            continue
+        rank, tick, preco, setor = h.group(1), h.group(2), h.group(3), h.group(4).strip()
+        bm = re.search(r'<span[^>]*>([^<]*(?:OBSERVAR|COMPRA|EVITAR|AGUARDAR)[^<]*)</span>', b)
+        badge = bm.group(1).strip() if bm else setor
+        kind = 'buy' if 'COMPRA' in badge else ('info' if 'OBSERVAR' in badge else 'warn')
+        body_m = re.search(r'</div>\s*<div[^>]*>(.*?)</div>', b, re.S)
+        raw = strip_tags(body_m.group(1)) if body_m else ''
+        gat = re.search(r'Gatilho[^:]*:\s*(.*?)(?:$|\|)', raw)
+        gtxt = gat.group(1).strip() if gat else ''
+        lv = {}
+        ref = brl(preco)
+        if ref is not None:
+            lv['ref'] = ref
+        tg, tdir = trigger_price(gtxt) if gtxt else (None, None)
+        if tg is not None:
+            lv['tg'] = tg
+            lv['td'] = tdir
+        for key, rx in (('sl', r'stop\s*R\$\s*([\d.,]+)'), ('tp', r'alvo\s*R\$\s*([\d.,]+)')):
+            mm = re.search(rx, raw, re.I)
+            if mm and brl(mm.group(1)) is not None:
+                lv[key] = brl(mm.group(1))
+        body = f'{preco} · Gatilho: {gtxt[:200]}' if gtxt else f'{preco} · {setor}'
+        items.append({'t': tick, 'kind': kind, 'title': f'{rank}º — {badge}', 'body': body, **lv})
+    if not items:
+        raise ValueError('parser v2 não achou itens')
+    return {'generatedAt': gen_dt.strftime('%Y-%m-%dT%H:%M'), 'items': items}
+
+
 def parse_radar(html, gen_dt):
     """Extrai itens de um HTML de análise diária (template estrito — adapte ao seu)."""
     items = []
@@ -116,8 +199,13 @@ def get_radar():
     src = os.environ.get('RADAR_HTML_FILE')
     if src and os.path.exists(src):
         try:
-            radar = parse_radar(open(src).read(),
-                                datetime.fromtimestamp(os.path.getmtime(src), TZ))
+            raw = open(src).read()
+            gen = datetime.fromtimestamp(os.path.getmtime(src), TZ)
+            try:
+                radar = parse_radar_v2(raw, gen)
+            except Exception as ex2:
+                print(f'radar: v2 falhou ({ex2}), tentando parser legado', file=sys.stderr)
+                radar = parse_radar(raw, gen)
             json.dump(radar, open(cache, 'w'), ensure_ascii=False)
             return radar
         except Exception as ex:
@@ -219,8 +307,10 @@ def main():
 
     IDX = {}
     for key, sym in (('IBOV', '^BVSP'), ('USDBRL', 'BRL=X')):
-        p, h = fetch(sym)
-        IDX[key] = {'p': round(p, 4 if key == 'USDBRL' else 0), 'pd': h[-2], 'h': h[-30:]}
+        # 6mo pro bloco grande do índice no cockpit; 'h' segue sendo a janela de 30
+        p, h = fetch(sym, '6mo')
+        IDX[key] = {'p': round(p, 4 if key == 'USDBRL' else 0), 'pd': h[-2],
+                    'h': h[-30:], 'hl': h[-120:]}
 
     radar = get_radar()
 
@@ -234,7 +324,12 @@ def main():
                   'const FERIADOS=' + json.dumps(fer) + ';', html)
     html = html.replace('/*__DATA__*/', 'const D=' + json.dumps(D, ensure_ascii=False)
                         + ';\nconst IDX=' + json.dumps(IDX) + ';\n')
-    html = html.replace('/*__OWNED__*/', 'const OWNED=' + json.dumps(owned, ensure_ascii=False) + ';')
+    html = html.replace('/*__OWNED__*/', 'const OWNED=' + json.dumps(owned, ensure_ascii=False)
+                        + ';\nconst CART=' + json.dumps({
+                            'cap': cart.get('capital_operacional'),
+                            'cash': cart.get('caixa_operacional'),
+                            'teto': cart.get('teto_posicoes', 8),
+                        }) + ';\n')
     html = html.replace('/*__RADAR__*/', 'const RADAR=' + json.dumps(radar, ensure_ascii=False) + ';')
     html = html.replace('<!--__AGENDA__-->', get_agenda(now))
     html = html.replace('__BUILT__', built)
