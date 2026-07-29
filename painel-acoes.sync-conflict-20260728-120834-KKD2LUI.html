@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel — Carteira & Radar B3</title>
+<style>
+:root{
+  --bg:#0a0e13; --panel:#10151c; --panel2:#151b24; --line:#1f2733;
+  --ink:#e2e9f2; --mut:#7f8ea1; --faint:#55637a;
+  --up:#2fbf8f; --up-dim:rgba(47,191,143,.14);
+  --dn:#f06860; --dn-dim:rgba(240,104,96,.14);
+  --amber:#e2a63d; --cyan:#4db8d6;
+  --mono:'SF Mono',ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace;
+  --sans:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px}
+body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .dn{color:var(--dn)}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+
+/* ── tape ── */
+.tape{overflow:hidden;border-bottom:1px solid var(--line);background:#070a0e;flex:0 0 42px;display:flex;align-items:center}
+.tape-track{display:flex;gap:44px;white-space:nowrap;animation:roll 150s linear infinite;padding-left:100%}
+@keyframes roll{to{transform:translateX(-100%)}}
+@media(prefers-reduced-motion:reduce){.tape-track{animation:none;padding-left:12px;flex-wrap:wrap}}
+.tk{font-family:var(--mono);font-size:15.5px}
+.tk b{color:#ffffff;font-weight:700;margin-right:9px}
+.tk span{margin-right:9px;color:#dde5ef}
+.tape .up{color:#48e6ae}
+.tape .dn{color:#ff8b82}
+
+/* ── market bar ── */
+.mbar{flex:0 0 46px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;border-bottom:1px solid var(--line);background:#0c1117}
+.mcenter{display:flex;gap:44px;align-items:center}
+.mright{display:flex;gap:16px;align-items:center;justify-content:flex-end}
+.mitem{display:flex;align-items:center;gap:10px}
+.mitem .lbl{margin-right:2px}
+.mitem .v{font-family:var(--mono);font-size:16px;font-weight:700}
+.mitem .v30{font-family:var(--mono);font-size:12.5px;color:var(--faint)}
+.mitem .arr{color:var(--faint);font-size:12px}
+.mitem .c{font-family:var(--mono);font-size:11.5px}
+.mitem svg{width:76px;height:26px}
+.msep{flex:1}
+.mclock{text-align:right}
+.mclock .v{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:.03em}
+.mclock .st{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.st.open{color:var(--up)} .st.closed{color:var(--dn)}
+.mdate{font-size:12px;color:var(--mut);text-transform:capitalize}
+
+/* ── layout ── */
+.wrap{flex:1;display:grid;grid-template-columns:340px 1fr 330px;grid-template-rows:1fr auto;gap:10px;padding:10px;max-width:1920px;width:100%;margin:0 auto;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.phead h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+
+/* col esquerda */
+.left{display:flex;flex-direction:column;gap:10px;min-height:0}
+.hero{padding:16px 16px 12px}
+.hero .lbl{margin-bottom:6px}
+.hero-val{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.01em}
+.hero-sub{display:flex;gap:18px;margin-top:10px}
+.hero-sub div span{display:block}
+.hero-sub .lbl{margin-bottom:2px}
+.hero-sub .num{font-size:15px;font-weight:600}
+.pos{padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.pos-dots{display:flex;gap:6px;justify-content:center}
+.pos-dots i{width:6px;height:6px;border-radius:99px;background:var(--line)}
+.pos-dots i.on{background:var(--amber)}
+@keyframes posfade{from{opacity:0}to{opacity:1}}
+.pos-inner{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;animation:posfade .4s ease}
+.pos-top{display:flex;justify-content:space-between;align-items:baseline}
+.pos-top .tkr{font-family:var(--mono);font-size:18px;font-weight:700}
+.pos-top .tag{font-size:10px;color:var(--faint);margin-left:8px}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px}
+.pos-grid .lbl{margin-bottom:2px}
+.pos-grid .num{font-size:14px;font-weight:600}
+.spark{flex:1;min-height:110px}
+.spark-wrap{position:relative;flex:1;min-height:110px}
+.spark-wrap .spark{position:absolute;inset:0;width:100%;height:100%}
+.spark-label{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;color:rgba(255,255,255,.72);text-shadow:0 1px 5px #000,0 0 2px #000;font-family:var(--mono);font-size:24px;font-weight:800;letter-spacing:.12em}
+.ts-tag{font-family:var(--mono);font-weight:700}
+.ts-tag.ts-ok{opacity:.75}
+.ts-tag.ts-warn{color:var(--amber)}
+.ts-tag.ts-out{color:#fff;background:var(--dn);padding:2px 6px;border-radius:4px;animation:tsblink 1.2s step-end infinite}
+@keyframes tsblink{50%{opacity:.45}}
+.entry-note{font-size:11px;color:var(--faint)}
+.entry-note b{color:var(--amber);font-family:var(--mono);font-weight:600}
+.entry-note .gain{color:var(--up)}
+.entry-note .loss{color:var(--dn)}
+
+/* treemap centro */
+.center{display:flex;flex-direction:column;gap:10px;min-height:0}
+.tmap{flex:1;display:flex;flex-direction:column;gap:3px;padding:10px;min-height:0}
+.trow{display:flex;gap:3px;flex:1;min-height:0}
+.cell{position:relative;border-radius:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-width:0;overflow:hidden;padding:4px;cursor:default;transition:filter .12s}
+.cell:hover{filter:brightness(1.3)}
+.cell .t{font-family:var(--mono);font-weight:700;font-size:13px}
+.cell .c{font-family:var(--mono);font-size:11px;opacity:.85}
+.cell.owned{outline:3px solid var(--amber);outline-offset:-3px;box-shadow:inset 0 0 18px rgba(245,184,65,.28),0 0 8px rgba(245,184,65,.45)}
+.cell.short-cell{outline:3px dashed var(--dn);outline-offset:-3px;box-shadow:inset 0 0 18px rgba(240,104,96,.30),0 0 8px rgba(240,104,96,.45)}
+.days-mark{position:absolute;bottom:5px;right:6px;padding:4px 8px;border-radius:4px;background:rgba(0,0,0,.45);color:#fff;font-family:var(--mono);font-size:17px;font-weight:800;line-height:1;letter-spacing:.04em}
+.days-mark.dm-warn{background:var(--amber);color:#17120a}
+.days-mark.dm-out{background:var(--dn);color:#fff;animation:tsblink 1.2s step-end infinite}
+.position-mark{position:absolute;top:4px;left:5px;padding:3px 7px;border-radius:3px;background:var(--amber);color:#17120a;font-family:var(--mono);font-size:13px;font-weight:800;line-height:1;letter-spacing:.04em}
+.short-cell .position-mark{background:var(--dn);color:#fff}
+.pos-top .tag.short-tag{background:var(--dn);color:#fff;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.5px;margin-left:8px;font-size:10px}
+.pos-inner.short-pos{box-shadow:inset 3px 0 0 var(--dn)}
+.legend{display:flex;gap:14px;align-items:center;padding:0 14px 10px;font-size:10px;color:var(--faint)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* banner mercado fechado */
+.mkban{display:none;margin:10px 10px 0;padding:9px 14px;border-radius:7px;align-items:center;gap:14px;flex:0 0 auto}
+.mkban.on{display:flex}
+.mkban .ico{font-size:20px}
+.mkban .t1{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.mkban .t2{font-size:11px;color:var(--mut);margin-top:2px}
+.mkban .cd{margin-left:auto;font-family:var(--mono);font-size:16px;font-weight:700}
+.mkban.after{background:#241d10;border:1px solid #4a3a18;color:var(--amber)}
+.mkban.wknd{background:#131a26;border:1px solid #263349;color:var(--cyan)}
+.mkban.on~.tmap{opacity:.85}
+
+/* tooltip */
+#tip{position:fixed;z-index:10;pointer-events:none;background:#0c1117;border:1px solid #2a3342;border-radius:7px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.55);display:none;min-width:190px}
+#tip .th{display:flex;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:2px}
+#tip .ts{font-size:10.5px;color:var(--faint);margin-bottom:6px}
+#tip svg{width:180px;height:44px;display:block}
+#tip .tf{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* col direita */
+.right{display:flex;flex-direction:column;gap:10px;min-height:0}
+.movers{padding:6px 10px;display:flex;flex-direction:column}
+.mrow{display:grid;grid-template-columns:52px 1fr 58px 62px;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;padding:4px 4px;border-radius:5px}
+.mrow:hover{background:var(--panel2)}
+.mrow b{font-weight:600;color:var(--ink)}
+.mrow svg{width:100%;height:20px}
+.mrow .pr{text-align:right;color:var(--mut)}
+.mrow .ch{text-align:right}
+.radar{flex:1;min-height:0;display:flex;flex-direction:column}
+.radar-body{overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+.rcard{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:6px;padding:9px 11px}
+.rcard.warn{border-left-color:var(--amber)}
+.rcard.buy{border-left-color:var(--up)}
+.rcard h3{font-family:var(--mono);font-size:12px;margin-bottom:4px}
+.rcard p{font-size:11.5px;color:var(--mut);line-height:1.45}
+.rcard time{font-size:10px;color:var(--faint)}
+
+/* rodapé */
+.foot{grid-column:1/-1;display:flex;gap:10px}
+.agenda{flex:1;display:flex;gap:10px;padding:10px 14px;align-items:stretch}
+.ag{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
+.ag .d{font-family:var(--mono);font-size:11px;color:var(--amber);font-weight:600}
+.ag .e{font-size:12px;font-weight:600;margin:2px 0}
+.ag .i{font-size:10.5px;color:var(--faint)}
+</style>
+
+<div class="tape"><div class="tape-track" id="tape"></div></div>
+
+<div class="mbar">
+  <div><span class="mdate" id="mdate"></span></div>
+  <div class="mcenter">
+    <div class="mitem"><span class="lbl">IBOV</span><span class="v30 num" id="ib-p"></span><span class="arr">→</span><span class="v num" id="ib-v"></span><span class="c" id="ib-c"></span><svg id="ib-s"></svg></div>
+    <div class="mitem"><span class="lbl">USD/BRL</span><span class="v30 num" id="us-p"></span><span class="arr">→</span><span class="v num" id="us-v"></span><span class="c" id="us-c"></span><svg id="us-s"></svg></div>
+  </div>
+  <div class="mright">
+    <div class="mclock"><div class="v num" id="clock"></div><div class="st" id="mst"></div></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="left">
+    <div class="panel hero">
+      <span class="lbl">Carteira · valor atual</span>
+      <div class="hero-val num" id="pv"></div>
+      <div class="hero-sub">
+        <div><span class="lbl">P&amp;L total</span><span class="num" id="pl"></span></div>
+        <div><span class="lbl">P&amp;L hoje</span><span class="num" id="pld"></span></div>
+        <div><span class="lbl">Custo</span><span class="num" id="pc"></span></div>
+      </div>
+    </div>
+    <div class="panel pos" id="posPanel"></div>
+  </div>
+
+  <div class="panel center">
+    <div class="phead"><h2>Watchlist skacoes · variação do dia</h2><span class="pill" id="mkt"></span></div>
+    <div class="mkban" id="mkban"><span class="ico" id="mkban-ico"></span><div><div class="t1" id="mkban-t1"></div><div class="t2" id="mkban-t2"></div></div><span class="cd num" id="mkban-cd"></span></div>
+    <div class="tmap" id="tmap"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--dn)"></span>queda</span>
+      <span><span class="sw" style="background:#2a3342"></span>estável</span>
+      <span><span class="sw" style="background:var(--up)"></span>alta</span>
+      <span><span class="sw" style="background:transparent;outline:2px solid var(--amber);outline-offset:-2px"></span>posição comprada</span>
+      <span><span class="sw" style="background:transparent;outline:2px dashed var(--dn);outline-offset:-2px"></span>posição vendida</span>
+      <span style="margin-left:auto">passe o mouse para detalhes</span>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="panel">
+      <div class="phead"><h2>Movers do dia</h2><span class="pill">30d</span></div>
+      <div class="movers" id="movers"></div>
+    </div>
+    <div class="panel radar">
+      <div class="phead"><h2>Radar skacoes</h2><span class="pill" id="radar-run"></span></div>
+      <div class="radar-body">
+        <div class="rcard buy"><h3 class="up">ASAI3 · setup de reversão</h3><p>Rompeu a máxima dos últimos 5 pregões com volume acima da média. Candidata a swing se confirmar fechamento acima de 9,00.</p><time>hoje 15:45 · exemplo</time></div>
+        <div class="rcard"><h3>LREN3 · posição aberta</h3><p>Consolidando entre 14,50 e 15,00. Acima do teu preço de entrada; suporte relevante em 14,30.</p><time>hoje 15:45 · exemplo</time></div>
+        <div class="rcard warn"><h3 style="color:var(--amber)">MRVE3 · evitar</h3><p>Tendência de baixa intacta no diário apesar do repique. Sem setup válido pela regra de R/R mínimo.</p><time>hoje 15:45 · exemplo</time></div>
+        <div class="rcard"><h3>Este feed será alimentado pelo job das 15:45</h3><p>O mesmo run que manda o e-mail grava um JSON e o painel lê daqui. Conteúdo acima é ilustrativo.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel foot">
+    <div class="agenda">
+      <div class="ag"><span class="d">SEG 27/07</span><div class="e">Boletim Focus</div><span class="i">expectativas Selic/IPCA · 08:25</span></div>
+<div class="ag"><span class="d">TER 28/07</span><div class="e">IPCA-15 (Jul)</div><span class="i">prévia da inflação · 09:00</span></div>
+<div class="ag"><span class="d">QUA 05/08</span><div class="e">Copom — decisão Selic</div><span class="i">alto impacto · 18:30</span></div>
+<div class="ag"><span class="d">SEX 07/08</span><div class="e">Payroll EUA</div><span class="i">alto impacto · 09:30</span></div>
+<div class="ag"><span class="d">QUI 13/08</span><div class="e">Earnings LREN3 2T26</div><span class="i">data a confirmar</span></div>
+
+    </div>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<script>
+const D={"BBAS3": {"p": 20.19, "pd": 20.17, "s": "Bancos", "h": [19.0, 19.41, 19.46, 19.39, 19.4, 19.41, 19.53, 19.42, 19.58, 19.86, 19.73, 20.05, 20.34, 20.26, 19.91, 19.73, 20.0, 19.98, 19.77, 19.73, 19.53, 20.0, 20.58, 20.24, 20.59, 20.55, 20.76, 20.49, 20.17, 20.19]}, "ASAI3": {"p": 8.16, "pd": 8.14, "s": "Varejo", "h": [8.2, 8.24, 8.1, 7.97, 7.89, 7.8, 7.68, 7.65, 7.7, 7.94, 8.27, 8.61, 8.83, 9.0, 8.74, 8.66, 8.69, 8.79, 8.67, 8.53, 8.49, 8.46, 8.87, 8.71, 8.66, 8.66, 8.56, 8.5, 8.14, 8.16]}, "LREN3": {"p": 13.27, "pd": 13.31, "s": "Varejo", "h": [14.82, 15.39, 15.38, 15.31, 14.89, 14.45, 13.99, 14.29, 14.39, 14.54, 14.5, 14.52, 14.97, 14.99, 14.76, 14.86, 14.8, 14.8, 14.09, 13.65, 13.71, 14.15, 14.62, 14.15, 14.29, 14.1, 13.65, 13.42, 13.31, 13.27]}, "ITUB4": {"p": 42.33, "pd": 42.3, "s": "Bancos", "h": [39.36, 40.5, 40.6, 40.4, 40.45, 40.8, 40.49, 39.87, 40.94, 41.05, 40.97, 41.7, 42.24, 42.41, 42.18, 42.44, 42.47, 42.74, 42.56, 42.43, 41.89, 42.59, 44.3, 43.52, 43.63, 43.14, 42.55, 41.96, 42.3, 42.33]}, "VALE3": {"p": 71.75, "pd": 71.93, "s": "B3", "h": [77.7, 78.8, 79.17, 81.16, 81.44, 79.78, 79.94, 80.75, 80.91, 79.38, 77.73, 78.66, 78.15, 78.13, 77.88, 77.97, 78.24, 78.84, 77.79, 76.2, 72.7, 73.15, 74.18, 72.85, 74.01, 74.51, 72.98, 72.94, 71.93, 71.75]}, "PETR4": {"p": 41.38, "pd": 41.15, "s": "B3", "h": [41.65, 41.76, 41.18, 39.06, 38.54, 38.57, 38.85, 38.8, 39.17, 39.33, 38.29, 38.45, 38.06, 38.14, 37.8, 37.83, 37.96, 38.25, 37.77, 38.44, 39.65, 39.21, 39.65, 40.66, 40.66, 40.59, 39.89, 40.9, 41.15, 41.38]}, "WEGE3": {"p": 43.02, "pd": 43.13, "s": "Industrial", "h": [42.39, 42.35, 42.61, 42.78, 42.83, 43.8, 45.81, 45.16, 45.25, 45.71, 46.61, 46.5, 46.9, 46.79, 46.91, 46.26, 46.26, 46.48, 46.26, 45.87, 45.35, 45.74, 46.51, 44.39, 44.2, 44.26, 43.49, 43.63, 43.13, 43.02]}};
+const IDX={"IBOV": {"p": 172850.0, "pd": 173371.0, "h": [168619.0, 171497.0, 171133.0, 170415.0, 169649.0, 168454.0, 168278.0, 168576.0, 170370.0, 171259.0, 170507.0, 171990.0, 173295.0, 173205.0, 172024.0, 171689.0, 172788.0, 174266.0, 172448.0, 172021.0, 170654.0, 172742.0, 177866.0, 175739.0, 176641.0, 176011.0, 173825.0, 173714.0, 173371.0, 172850.06]}, "USDBRL": {"p": 5.0773, "pd": 5.13, "h": [5.19, 5.19, 5.11, 5.06, 5.08, 5.1, 5.12, 5.18, 5.15, 5.16, 5.2, 5.21, 5.19, 5.17, 5.18, 5.17, 5.22, 5.22, 5.18, 5.14, 5.17, 5.16, 5.13, 5.11, 5.15, 5.09, 5.09, 5.11, 5.13, 5.08]}};
+
+const OWNED={"PETR4": {"q": 200, "e": 38.5, "d": "", "sl": 36.58, "tp": 41.58}, "VALE3": {"q": 100, "e": 61.2, "d": ""}};
+const RADAR={"generatedAt": "2026-07-21T11:10", "items": [{"t": "", "kind": "info", "title": "Radar não configurado", "body": "Aponte RADAR_HTML_FILE pra uma análise diária ou edite data/radar.json."}]};
+const fmt=(v,d=2)=>v.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=v=>(v>=0?'+':'')+fmt(v)+'%';
+const chg=t=>(D[t].p/D[t].pd-1)*100;
+const cls=v=>v>=0?'up':'dn',sig=v=>(v>=0?'+':'−')+fmt(Math.abs(v));
+
+/* sparkline genérico */
+function sparkSVG(h,{w=100,ht=30,ref=null,refs=null,color=null,fill=false}={}){
+  const levels=refs||(ref!=null?[{value:ref,color:'var(--amber)',dash:'4 3'}]:[]);
+  const levelValues=levels.map(x=>x.value).filter(Number.isFinite);
+  const mn=Math.min(...h,...levelValues)*0.999, mx=Math.max(...h,...levelValues)*1.001;
+  const X=i=>i/(h.length-1)*w, Y=v=>ht-1-(v-mn)/(mx-mn)*(ht-2);
+  const up=h[h.length-1]>=h[0];
+  const c=color||(up?'var(--up)':'var(--dn)');
+  const dim=c==='var(--dn)'?'var(--dn-dim)':'var(--up-dim)';
+  const pts=h.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  let s=`<svg viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none">`;
+  if(fill)s+=`<polygon points="0,${ht} ${pts} ${w},${ht}" fill="${dim}"/>`;
+  for(const level of levels){if(Number.isFinite(level.value))s+=`<line x1="0" x2="${w}" y1="${Y(level.value)}" y2="${Y(level.value)}" stroke="${level.color}" stroke-dasharray="${level.dash||'4 3'}" stroke-width="${level.width||1.2}"/>`;}
+  s+=`<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  return s+`<circle cx="${X(h.length-1)}" cy="${Y(h[h.length-1])}" r="2.2" fill="${c}"/></svg>`;
+}
+
+/* tape — ordenado da maior queda pra maior alta */
+const tape=document.getElementById('tape');
+let th='';
+for(const t of Object.keys(D).sort((a,b)=>chg(a)-chg(b))){const c=chg(t);th+=`<span class="tk"><b>${t}</b><span>${fmt(D[t].p)}</span><span class="${c>=0?'up':'dn'}">${pct(c)}</span></span>`;}
+tape.innerHTML=th+th;
+
+/* market bar */
+function mkIdx(pref,d,dec){
+  const ago=d.h[0], c30=(d.p/ago-1)*100, cd=(d.p/d.pd-1)*100;
+  document.getElementById(pref+'-p').textContent=fmt(ago,dec);
+  const v=document.getElementById(pref+'-v');v.textContent=fmt(d.p,dec);v.className='v num '+cls(c30);
+  document.getElementById(pref+'-c').innerHTML=`<span class="${cls(c30)}">30d ${pct(c30)}</span> <span style="color:var(--faint)">·</span> <span class="${cls(cd)}">hoje ${pct(cd)}</span>`;
+  document.getElementById(pref+'-s').outerHTML=sparkSVG(d.h,{w:76,ht:26}).replace('<svg','<svg style="width:76px;height:26px"');
+}
+mkIdx('ib',IDX.IBOV,0);mkIdx('us',IDX.USDBRL,2);
+const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+/* feriados B3 2026 (+ 01/01/2027) — atualizar na virada do ano */
+const FERIADOS=["2026-01-01", "2026-02-16", "2026-02-17", "2026-04-03", "2026-04-21", "2026-05-01", "2026-06-04", "2026-09-07", "2026-10-12", "2026-11-02", "2026-11-15", "2026-11-20", "2026-12-24", "2026-12-25", "2026-12-31", "2027-01-01", "2027-02-08", "2027-02-09", "2027-03-26", "2027-04-21", "2027-05-01", "2027-05-27", "2027-09-07", "2027-10-12", "2027-11-02", "2027-11-15", "2027-11-20", "2027-12-24", "2027-12-25", "2027-12-31"];
+const pad2=x=>String(x).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const isTrade=d=>d.getDay()>=1&&d.getDay()<=5&&!FERIADOS.includes(ymd(d));
+function tick(){
+  const n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  document.getElementById('clock').textContent=n.toTimeString().slice(0,8);
+  document.getElementById('mdate').textContent=`${days[n.getDay()]}, ${n.toLocaleDateString('pt-BR')}`;
+  const mins=n.getHours()*60+n.getMinutes();
+  const open=isTrade(n)&&mins>=600&&mins<1020;
+  const st=document.getElementById('mst');
+  st.textContent=open?'pregão aberto':'pregão fechado';st.className='st '+(open?'open':'closed');
+  const ban=document.getElementById('mkban');
+  if(open){ban.className='mkban';return}
+  /* próxima abertura: hoje 10:00 se ainda for dia útil antes do pregão, senão próximo dia útil */
+  const nx=new Date(n);
+  if(!(isTrade(n)&&mins<600))do{nx.setDate(nx.getDate()+1)}while(!isTrade(nx));
+  nx.setHours(10,0,0,0);
+  const wknd=!isTrade(n);
+  const dsm=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const ms=nx-n,hh=Math.floor(ms/3.6e6),mm=Math.floor(ms%3.6e6/6e4);
+  document.getElementById('mkban-ico').textContent=wknd?'🌙':'⏸';
+  document.getElementById('mkban-t1').textContent=wknd?((n.getDay()===0||n.getDay()===6)?'FIM DE SEMANA — B3 FECHADA':'FERIADO — B3 FECHADA'):'MERCADO FECHADO';
+  document.getElementById('mkban-t2').textContent=`pregão volta ${dsm[nx.getDay()]} ${pad2(nx.getDate())}/${pad2(nx.getMonth()+1)} às 10:00 · dados: atualizado TER 11:10`;
+  document.getElementById('mkban-cd').textContent='abre em '+(hh>=24?Math.floor(hh/24)+'d '+(hh%24)+'h':hh+'h '+pad2(mm)+'m');
+  ban.className='mkban on '+(wknd?'wknd':'after');
+}
+tick();setInterval(tick,1000);
+/* auto-reload: recarrega do servidor a cada 5min pra pegar o build novo (sem isso o kiosk mostra página velha pra sempre) */
+setTimeout(()=>location.reload(true),5*60*1000);
+
+/* carteira — soma de todas as posições */
+const POS=Object.keys(OWNED);
+/* time stop: swing = 2-10 dias uteis; conta pregoes desde a entrada (dia da compra = D+0) */
+const TIME_STOP=10;
+const bizDays=ds=>{if(!ds)return null;const d=new Date(ds+'T12:00:00'),today=new Date();today.setHours(12,0,0,0);
+  let n=0;while(d<today){d.setDate(d.getDate()+1);if(isTrade(d))n++;}return n;};
+const tsBadge=o=>{const n=bizDays(o.d);if(n===null)return'';
+  const st=n>=TIME_STOP?'ts-out':n>=TIME_STOP-2?'ts-warn':'ts-ok';
+  const txt=n>=TIME_STOP?`D+${n} · TIME STOP`:`D+${n}/${TIME_STOP}`;
+  return`<span class="tag ts-tag ${st}">${txt}</span>`;};
+/* marca no treemap: pregoes que FALTAM ate rever a posicao (time stop) */
+const daysMark=o=>{const n=bizDays(o.d);if(n===null)return'';
+  const left=TIME_STOP-n;
+  if(left<=0)return'<span class="days-mark dm-out">REVER</span>';
+  return`<span class="days-mark${left<=2?' dm-warn':''}">${left}d</span>`;};
+/* short (o.sh): lucro quando o preço cai; sinal invertido em P&L e variação diária */
+const sgn=o=>o.sh?-1:1;
+let cost=0,val=0,pld=0,pl=0;
+for(const t of POS){const o=OWNED[t];cost+=o.q*o.e;val+=o.q*D[t].p;pld+=sgn(o)*o.q*(D[t].p-D[t].pd);pl+=sgn(o)*o.q*(D[t].p-o.e);}
+document.getElementById('pv').textContent='R$ '+fmt(val);
+document.getElementById('pc').textContent='R$ '+fmt(cost);
+const set=(id,txt,v)=>{const el=document.getElementById(id);el.textContent=txt;el.className='num '+cls(v)};
+set('pl',cost?`${sig(pl)} (${pct(pl/cost*100)})`:'—',pl);
+set('pld',(val-pld)?`${sig(pld)} (${pct(pld/(val-pld)*100)})`:'—',pld);
+
+/* card de posição — carrossel se houver mais de uma */
+let posIdx=0;
+function renderPos(){
+  if(!POS.length){document.getElementById('posPanel').innerHTML=
+    '<div class="pos-inner" style="justify-content:center;align-items:center;text-align:center">'+
+    '<span class="lbl" style="font-size:13px">sem posição aberta</span>'+
+    '<span class="lbl" style="opacity:.5;margin-top:6px">carteira 100% em caixa</span></div>';return;}
+  const t=POS[posIdx],o=OWNED[t],d=D[t];
+  const s=sgn(o),pv=o.q*d.p,ppl=s*o.q*(d.p-o.e);
+  const c=(v,txt)=>`<span class="num ${cls(v)}">${txt}</span>`;
+  const levels=[{value:o.e,color:'var(--amber)',dash:'4 3'}];
+  if(Number.isFinite(o.tp))levels.push({value:o.tp,color:'var(--up)',dash:'5 3'});
+  if(Number.isFinite(o.sl))levels.push({value:o.sl,color:'var(--dn)',dash:'5 3'});
+  const dots=POS.length>1?`<div class="pos-dots">${POS.map((_,i)=>`<i class="${i===posIdx?'on':''}"></i>`).join('')}</div>`:'';
+  const shBadge=o.sh?'<span class="tag short-tag">▼ VENDIDO</span>':'';
+  document.getElementById('posPanel').innerHTML=`<div class="pos-inner${o.sh?' short-pos':''}">
+    <div class="pos-top">
+      <div><span class="tkr">${t}</span>${shBadge}<span class="tag">${o.tag||d.s}</span>${tsBadge(o)}</div>
+      <span class="num ${cls(s*(d.p-d.pd))}" style="font-size:18px;font-weight:700">${fmt(d.p)}</span>
+    </div>
+    <div class="pos-grid">
+      <div><span class="lbl">Qtd</span><span class="num">${o.sh?'-':''}${o.q}</span></div>
+      <div><span class="lbl">${o.sh?'Venda':'Entrada'}</span><span class="num">${fmt(o.e)}</span></div>
+      <div><span class="lbl">Desde entrada</span>${c(s*(d.p-o.e),pct(s*(d.p/o.e-1)*100))}</div>
+      <div><span class="lbl">Hoje</span>${c(s*(d.p-d.pd),pct(s*(d.p/d.pd-1)*100))}</div>
+      <div><span class="lbl">Posição</span><span class="num">R$ ${fmt(pv)}</span></div>
+      <div><span class="lbl">P&amp;L</span>${c(ppl,sig(ppl))}</div>
+    </div>
+    <div class="spark-wrap">${sparkSVG(d.h,{w:300,ht:110,refs:levels,fill:true,color:ppl>=0?'var(--up)':'var(--dn)'}).replace('<svg','<svg class="spark"')}<span class="spark-label">${t}</span></div>
+    <span class="entry-note">${Number.isFinite(o.tp)?`<b class="gain">GAIN ${fmt(o.tp)}</b> · `:''}<b>ENTRADA ${fmt(o.e)}</b>${Number.isFinite(o.sl)?` · <b class="loss">LOSS ${fmt(o.sl)}</b>`:''} · últimos 30 pregões</span>
+    ${dots}</div>`;
+}
+renderPos();
+if(POS.length>1)setInterval(()=>{posIdx=(posIdx+1)%POS.length;renderPos()},5000);
+
+/* radar — carimbo HOJE/DIA ANTERIOR hh:mm */
+(function(){
+  const g=new Date(RADAR.generatedAt);
+  const dsem=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const stamp=dsem[g.getDay()]+' '+String(g.getHours()).padStart(2,'0')+':'+String(g.getMinutes()).padStart(2,'0');
+  document.getElementById('radar-run').textContent='último run: '+stamp;
+  const kc={buy:'buy',warn:'warn',info:''};
+  const hc={buy:'class="up"',warn:'style="color:var(--amber)"',info:''};
+  document.querySelector('.radar-body').innerHTML=RADAR.items.map(it=>
+    `<div class="rcard ${kc[it.kind]||''}"><h3 ${hc[it.kind]||''}>${it.t?it.t+' · ':''}${it.title}</h3><p>${it.body}</p><time>${stamp}</time></div>`).join('');
+})();
+
+/* treemap */
+const tiles=Object.keys(D).map(t=>({t,c:chg(t),w:1.2+Math.abs(chg(t))})).sort((a,b)=>b.c-a.c);
+const col=c=>{
+  const a=Math.min(Math.abs(c)/3,1);
+  if(Math.abs(c)<.15)return'#232c3a';
+  return c>0?`color-mix(in srgb,#2fbf8f ${25+a*75}%, #16241f)`:`color-mix(in srgb,#f06860 ${25+a*75}%, #241717)`;
+};
+const rows=[[],[],[],[]];
+tiles.forEach((x,i)=>rows[Math.floor(i/6)]?.push(x)||rows[3].push(x));
+document.getElementById('tmap').innerHTML=rows.filter(r=>r.length).map(r=>
+  `<div class="trow">${r.map(x=>`<div class="cell${OWNED[x.t]?(OWNED[x.t].sh?' owned short-cell':' owned'):''}" data-t="${x.t}" style="flex:${x.w.toFixed(2)};background:${col(x.c)}">
+    ${OWNED[x.t]?`<span class="position-mark">${OWNED[x.t].sh?'VENDIDO':'COMPRADO'}</span>${daysMark(OWNED[x.t])}`:''}<span class="t">${x.t}${OWNED[x.t]?.sh?' ▼':''}</span><span class="c">${pct(x.c)}</span><span class="c" style="opacity:.55;font-size:10px">${D[x.t].s}</span></div>`).join('')}</div>`).join('');
+
+/* tooltip */
+const tip=document.getElementById('tip');
+document.getElementById('tmap').addEventListener('mousemove',ev=>{
+  const cell=ev.target.closest('.cell');
+  if(!cell){tip.style.display='none';return}
+  const t=cell.dataset.t,d=D[t],c=chg(t),m30=(d.p/d.h[0]-1)*100;
+  tip.innerHTML=`<div class="th"><span>${t}</span><span class="${cls(c)}">R$ ${fmt(d.p)}</span></div>
+    <div class="ts">${d.s} · hoje <span class="${cls(c)}">${pct(c)}</span> · 30d <span class="${cls(m30)}">${pct(m30)}</span></div>
+    ${sparkSVG(d.h,{w:180,ht:44,ref:OWNED[t]?.e})}
+    ${OWNED[t]?`<div class="tf">${OWNED[t].sh?'▼ VENDIDO':'posição'}: ${OWNED[t].sh?'-':''}${OWNED[t].q} @ ${fmt(OWNED[t].e)} · linha âmbar = ${OWNED[t].sh?'venda (abaixo = lucro)':'entrada'}</div>`:''}`;
+  tip.style.display='block';
+  const r=tip.getBoundingClientRect();
+  tip.style.left=Math.min(ev.clientX+16,innerWidth-r.width-10)+'px';
+  tip.style.top=Math.min(ev.clientY+14,innerHeight-r.height-10)+'px';
+});
+document.getElementById('tmap').addEventListener('mouseleave',()=>tip.style.display='none');
+
+/* movers com sparkline */
+const sorted=[...tiles].sort((a,b)=>b.c-a.c);
+const movers=[...sorted.slice(0,3),...sorted.slice(-3)];
+document.getElementById('movers').innerHTML=movers.map(x=>
+  `<div class="mrow"><b>${x.t}</b>${sparkSVG(D[x.t].h,{w:100,ht:20})}<span class="pr">${fmt(D[x.t].p)}</span><span class="ch ${cls(x.c)}">${pct(x.c)}</span></div>`).join('');
+document.getElementById('mkt').textContent='atualizado TER 11:10';
+</script>
