@@ -1,0 +1,19 @@
+# Example: serve the built dashboard from a small nginx container instead of
+# Home Assistant's /local/ folder. Point PAINEL_SSH_PATH at ./www/painel-acoes.html
+# on the host running this compose file.
+services:
+  web:
+    image: nginx:1.29-alpine
+    container_name: painel-web
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./www:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/painel-acoes.html || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

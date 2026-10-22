@@ -1,0 +1,4 @@
+{
+  "_doc": "SAMPLE DATA ONLY. Copy to data/snooze.json (git-ignored). Map ticker -> ISO date 'reviewed until' (inclusive). While today <= date, the position's TIME STOP badge stops blinking and shows the sessions left until the review. carteira.json is never modified. Past dates are ignored; keys starting with '_' are never looked up.",
+  "PETR4": "2026-08-14"
+}

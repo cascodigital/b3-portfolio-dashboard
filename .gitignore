@@ -3,3 +3,4 @@ data/radar.json
 data/carteira.json
 __pycache__/
 *.pyc
+data/snooze.json

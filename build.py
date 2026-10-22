@@ -4,7 +4,7 @@
 Reads the watchlist (data/acoes.txt), the positions (data/carteira.json) and,
 if present, an analysis radar (data/radar.json or RADAR_HTML_FILE), fetches
 quotes from Yahoo Finance, renders the HTML from template.html and optionally
-publishes it over SSH.
+publishes it over SSH (atomic write: temp file + mv on the remote side).
 
 Python standard library only: nothing to pip install.
 
@@ -12,12 +12,14 @@ Usage: python3 build.py [--no-push]
 
 Environment variables (all optional):
   PAINEL_DATA_DIR   directory holding acoes.txt/carteira.json (default: ./data)
+  PAINEL_SNOOZE_FILE  time-stop snooze map (default: $PAINEL_DATA_DIR/snooze.json)
   RADAR_HTML_FILE   daily analysis HTML to parse (default: none)
   PAINEL_SSH_DEST   push destination, e.g. root@homeassistant
   PAINEL_SSH_PORT   SSH port (default: 22)
   PAINEL_SSH_PATH   remote path (default: /config/www/painel-acoes.html)
+  PAINEL_SSH_KEY    private key passed to ssh -i (default: ssh's own choice)
 """
-import json, os, re, subprocess, sys, urllib.request
+import json, os, re, shlex, subprocess, sys, urllib.request
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -275,14 +277,25 @@ def parse_oco(position):
 
 def main():
     cart = json.load(open(f'{DATA}/carteira.json'))
+    # snooze.json (optional): ticker -> ISO date 'reviewed until'. Suppresses the
+    # blinking TIME STOP badge on the dashboard without touching carteira.json.
+    snooze_file = os.environ.get('PAINEL_SNOOZE_FILE', f'{DATA}/snooze.json')
+    snooze = {}
+    if os.path.exists(snooze_file):
+        try:
+            snooze = json.load(open(snooze_file))
+        except Exception as ex:
+            print(f'snooze: ignored ({ex})', file=sys.stderr)
     owned = {}
     for p in cart['posicoes']:
         stop, target = parse_oco(p)
+        rv = snooze.get(p['ticker'])
         owned[p['ticker']] = {
             'q': p['qtd'], 'e': p['preco_entrada'], 'd': p.get('data_compra', ''),
             **({'sl': stop} if stop is not None else {}),
             **({'tp': target} if target is not None else {}),
             **({'sh': 1} if p.get('lado') == 'short' else {}),
+            **({'rv': rv} if isinstance(rv, str) else {}),
         }
 
     tickers = [l.strip().replace('.SA', '') for l in open(f'{DATA}/acoes.txt') if l.strip()]
@@ -342,9 +355,16 @@ def main():
     if '--no-push' not in sys.argv and dest:
         port = os.environ.get('PAINEL_SSH_PORT', '22')
         rpath = os.environ.get('PAINEL_SSH_PATH', '/config/www/painel-acoes.html')
+        rtmp = f'{rpath}.tmp'
+        key = os.environ.get('PAINEL_SSH_KEY')
+        # Write to a temp file and rename, so the web server never serves a
+        # half-written page while the upload is in progress.
         r = subprocess.run(
-            ['ssh', '-p', port, '-o', 'StrictHostKeyChecking=no',
-             '-o', 'ConnectTimeout=10', dest, f'cat > {rpath}'],
+            ['ssh', '-p', port,
+             *(['-i', key, '-o', 'IdentitiesOnly=yes'] if key else []),
+             '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=10', dest,
+             f'cat > {shlex.quote(rtmp)} && chmod 0644 {shlex.quote(rtmp)} && '
+             f'mv {shlex.quote(rtmp)} {shlex.quote(rpath)}'],
             stdin=open(out), capture_output=True, text=True)
         if r.returncode != 0:
             sys.exit(f'push failed: {r.stderr[:300]}')

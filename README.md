@@ -22,11 +22,12 @@ no `pip install`, no container.
 - Renders a cockpit with portfolio value, total and daily P&L, cost basis, exposure gauge against an 80% cap, cash, and Ibovespa with a 120-session chart plus USD/BRL.
 - Draws up to six "trading desk" cards (open positions first, then radar candidates), each with a 30-session chart and stop, target, entry and trigger levels.
 - Tracks long and short positions, with P&L signs inverted for shorts and a D+N/10 time-stop badge per position.
+- Snoozes the time-stop badge per ticker until a review date (`snooze.json`), without editing the portfolio file.
 - Ranks the full watchlist by 30-day relative strength against the Ibovespa in a compact text strip.
 - Computes B3 holidays (fixed dates plus Easter-based Carnival, Good Friday and Corpus Christi) and shows a market-closed banner with a countdown to the next session.
 - Builds a 5-event agenda from `events.json` plus computed recurring events (Focus report on Mondays, US payroll on the first Friday).
 - Masks every BRL amount with one flag (`MASK_PRIVATE_VALUES`) for screens in shared spaces.
-- Optionally pushes the HTML over SSH to Home Assistant's `www/` folder; the page reloads itself every 5 minutes.
+- Optionally pushes the HTML over SSH (temp file + atomic rename) to Home Assistant's `www/` folder or any web root; the page reloads itself every 5 minutes.
 
 ## How it works
 
@@ -34,6 +35,7 @@ no `pip install`, no container.
 data/acoes.txt         watchlist (B3 tickers)
 data/carteira.json     positions (qty, entry, OCO) + capital and cash   [git-ignored]
 data/radar.json        optional radar cache / hand-written picks        [git-ignored]
+data/snooze.json       optional ticker -> 'reviewed until' date         [git-ignored]
 events.json            dated events (Copom, IPCA, earnings)
 template.html          layout: HTML/CSS/JS with placeholders
         |
@@ -41,7 +43,7 @@ template.html          layout: HTML/CSS/JS with placeholders
 build.py  -->  fetches quotes (Yahoo Finance chart API, no token)
                computes holidays and the agenda
                splices JSON into the template  -->  painel-acoes.html
-               (optional) ssh push to Home Assistant
+               (optional) ssh push to Home Assistant or an nginx web root
 ```
 
 - The output HTML is static; the clock and session status run live in JavaScript, quotes change on each build.
@@ -85,10 +87,12 @@ Environment variables read by `build.py`:
 | Variable / key | Required | Default | Description |
 |---|---|---|---|
 | `PAINEL_DATA_DIR` | No | `./data` | Directory holding `acoes.txt`, `carteira.json` and `radar.json` |
+| `PAINEL_SNOOZE_FILE` | No | `$PAINEL_DATA_DIR/snooze.json` | Time-stop snooze map; missing file means no snoozes |
 | `RADAR_HTML_FILE` | No | none | Daily analysis HTML to parse into the radar |
 | `PAINEL_SSH_DEST` | No | none | SSH destination for the push, e.g. `root@homeassistant`; no push when unset |
 | `PAINEL_SSH_PORT` | No | `22` | SSH port |
-| `PAINEL_SSH_PATH` | No | `/config/www/painel-acoes.html` | Remote path written via `ssh ... cat >` |
+| `PAINEL_SSH_PATH` | No | `/config/www/painel-acoes.html` | Remote path; written to `<path>.tmp`, set to 0644, then renamed |
+| `PAINEL_SSH_KEY` | No | none | Private key for `ssh -i` (with `IdentitiesOnly=yes`); ssh defaults when unset |
 
 Portfolio file `data/carteira.json` (keys are in Portuguese and are read by the code; see `data/carteira.example.json`):
 
@@ -143,6 +147,20 @@ systemctl --user enable --now painel-acoes.timer
 `kind` (`buy`, `warn`, `info`) sets the color. Numeric fields create a desk card: `ref` (price at
 analysis time), `tg` + `td` (trigger price and direction, `up` for breakout, `down` for pullback),
 `sl` / `tp` (stop and target).
+
+**Snooze a time stop.** When a position passes its time stop but you have reviewed it and decided to
+hold, add it to `data/snooze.json` (see `data/snooze.example.json`):
+
+```json
+{"PETR4": "2026-08-14"}
+```
+
+Until that date (inclusive) the badge stops blinking and shows `REVER Nd`, the sessions left until the
+review. Past dates are ignored, so the badge returns on its own.
+
+**Serve without Home Assistant.** `deploy/` has an nginx compose example that serves `./www` on port
+8088, redirects `/acoes` to the dashboard and keeps `/local/...` URLs working for kiosks configured for
+Home Assistant. Set `PAINEL_SSH_PATH` to the `www/painel-acoes.html` file on that host.
 
 **Validate the template** after editing it:
 
