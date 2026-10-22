@@ -1,0 +1,17 @@
+{
+  "_doc": "SAMPLE DATA ONLY. Copy to data/carteira.json (git-ignored) and replace with your own positions. lado omitted means long; use \"lado\": \"short\" for short sales. stop_loss/alvo are optional OCO levels.",
+  "atualizado": "2026-07-26",
+  "capital_operacional": 50000.00,
+  "caixa_operacional": 38500.00,
+  "teto_posicoes": 8,
+  "posicoes": [
+    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50, "data_compra": "2026-07-20",
+     "stop_loss": 36.58, "alvo": 41.58},
+    {"ticker": "ABEV3", "lado": "short", "qtd": 100, "preco_entrada": 15.20,
+     "data_compra": "2026-07-22", "stop_loss": 16.05, "alvo": 14.10}
+  ],
+  "historico_vendas": [
+    {"ticker": "BBAS3", "qtd": 300, "preco_entrada": 26.10, "preco_saida": 27.45,
+     "data_venda": "2026-06-15", "obs": "alvo atingido"}
+  ]
+}

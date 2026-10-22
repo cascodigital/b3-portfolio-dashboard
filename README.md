@@ -1,109 +1,127 @@
-# 📈 Painel de Ações B3 — Dashboard 1080p pra TV / Home Assistant
+# b3-portfolio-dashboard
 
-Dashboard dark de carteira B3 pensado pra ficar aberto numa tela dedicada (TV, kiosk, painel do Home Assistant). A tela mostra só o que exige decisão: um **cockpit** com carteira, exposição contra o teto da estratégia e o índice em 120 pregões; uma **mesa de operação** com um card por posição ou candidata, cada uma com 30 pregões e os níveis de OCO desenhados; radar de análise diária e agenda econômica. A watchlist inteira fica numa faixa de texto no rodapé, ordenada por força relativa contra o índice — acompanhamento não ocupa espaço de decisão.
+A zero-dependency, self-contained 1080p dashboard for a Brazilian (B3) stock portfolio, built for a dedicated TV, kiosk or Home Assistant panel.
 
-É a evolução do antigo visualizador Dash/Plotly deste repo — agora **zero dependências**: um script Python (só stdlib) gera um **HTML auto-contido** a partir de um template. Sem servidor, sem pip install, sem container.
+![License](https://img.shields.io/badge/license-MIT-blue) ![Python](https://img.shields.io/badge/python-3.9%2B-3776AB) ![Status](https://img.shields.io/badge/status-active-green)
 
-![painel](exemplo.png)
+![dashboard](exemplo.png)
 
-## Quickstart (60 segundos)
+*Screenshot taken with `MASK_PRIVATE_VALUES` enabled. The dashboard UI is in Brazilian Portuguese.*
 
-```bash
-git clone https://github.com/cascodigital/b3-portfolio-dashboard
-cd b3-portfolio-dashboard
+## Overview
 
-# 1. sua carteira: edite data/carteira.json (ticker, qtd, entrada e, se tiver, stop/alvo)
-# 2. sua watchlist: edite data/acoes.txt (um ticker B3 por linha)
+Broker apps and charting tools show everything at once and need someone to click around. This
+dashboard is meant to stay open on a wall screen and show only what requires a decision: portfolio
+P&L, exposure against the strategy cap, each open position with its stop/target (OCO) levels, radar
+candidates close to their trigger, and the economic calendar. A Python script using only the standard
+library pulls quotes from Yahoo Finance and renders one static HTML file from a template: no server,
+no `pip install`, no container.
 
-python3 build.py --no-push
-xdg-open painel-acoes.html   # ou só abra o arquivo no browser
+## Features
+
+- Renders a cockpit with portfolio value, total and daily P&L, cost basis, exposure gauge against an 80% cap, cash, and Ibovespa with a 120-session chart plus USD/BRL.
+- Draws up to six "trading desk" cards (open positions first, then radar candidates), each with a 30-session chart and stop, target, entry and trigger levels.
+- Tracks long and short positions, with P&L signs inverted for shorts and a D+N/10 time-stop badge per position.
+- Ranks the full watchlist by 30-day relative strength against the Ibovespa in a compact text strip.
+- Computes B3 holidays (fixed dates plus Easter-based Carnival, Good Friday and Corpus Christi) and shows a market-closed banner with a countdown to the next session.
+- Builds a 5-event agenda from `events.json` plus computed recurring events (Focus report on Mondays, US payroll on the first Friday).
+- Masks every BRL amount with one flag (`MASK_PRIVATE_VALUES`) for screens in shared spaces.
+- Optionally pushes the HTML over SSH to Home Assistant's `www/` folder; the page reloads itself every 5 minutes.
+
+## How it works
+
+```
+data/acoes.txt         watchlist (B3 tickers)
+data/carteira.json     positions (qty, entry, OCO) + capital and cash   [git-ignored]
+data/radar.json        optional radar cache / hand-written picks        [git-ignored]
+events.json            dated events (Copom, IPCA, earnings)
+template.html          layout: HTML/CSS/JS with placeholders
+        |
+        v
+build.py  -->  fetches quotes (Yahoo Finance chart API, no token)
+               computes holidays and the agenda
+               splices JSON into the template  -->  painel-acoes.html
+               (optional) ssh push to Home Assistant
 ```
 
-Só isso. Requisito único: Python 3.9+. Tudo abaixo desta linha é **opcional** — automação, publicação numa TV e integrações.
+- The output HTML is static; the clock and session status run live in JavaScript, quotes change on each build.
+- Auto-reload navigates to `?v=<timestamp>` instead of calling `location.reload()`, because Home Assistant serves `/local/` with a 31-day `Cache-Control` and some kiosk browsers ignore forced reloads.
+- Guardrails: if more than half of the quotes fail, or any open position has no quote, the build aborts without overwriting the previous dashboard. If the radar source cannot be parsed, the last cached radar is used.
+- `check.js` runs the dashboard script in Node against a minimal DOM shim, because a JS error in the template otherwise leaves the screen silently blank.
 
-## Como funciona
+## Requirements
 
-```
-data/acoes.txt        watchlist (tickers B3)
-data/carteira.json    posições reais (qtd, entrada, OCO) + capital e caixa
-events.json           eventos datados (Copom, IPCA, earnings)
-template.html         visual — HTML/CSS/JS com placeholders
-        │
-        ▼
-build.py  ──►  busca cotações (Yahoo Finance, sem token)
-              calcula agenda (Focus toda segunda, Payroll 1ª sexta)
-              splice no template  ──►  painel-acoes.html
-              (opcional) push via SSH pro Home Assistant
-```
+- Python 3.9+ (standard library only; `zoneinfo` is required)
+- Internet access to `query1.finance.yahoo.com`
+- Optional: Node.js to run `check.js`
+- Optional: SSH key access to a Home Assistant host for publishing
+- Optional: systemd (user units) for scheduling
 
-O HTML final é estático e auto-contido — relógio e status de pregão rodam em JS ao vivo; cotações mudam a cada build. A página **se recarrega sozinha a cada 5 minutos** pra pegar o build mais novo do servidor — essencial em TV/kiosk, onde ninguém aperta F5. Com o timer de 15 min, a latência máxima entre editar a carteira e ver na tela é ~20 min.
+## Quick start
 
-## Como ler a tela
+1. Clone the repo and create your portfolio file from the sample:
 
-**Cockpit** (topo) — três blocos: carteira (valor, P&L total, P&L do dia, custo), exposição (posições a mercado sobre o capital, com gauge medido contra o teto de 80% da estratégia, contador de posições, caixa e teto livre) e o índice (valor, dia, 30 pregões, dólar e gráfico de 120 pregões).
+   ```bash
+   git clone https://github.com/cascodigital/b3-portfolio-dashboard
+   cd b3-portfolio-dashboard
+   cp data/carteira.example.json data/carteira.json
+   ```
 
-**Mesa de operação** (centro) — até 6 cards, posições primeiro e candidatas do radar depois, cada um com 30 pregões e os níveis desenhados. A grade se ajusta à quantidade e o último card estica pra não deixar buraco na linha final.
+2. Edit `data/acoes.txt` (one B3 ticker per line, `.SA` suffix optional) and `data/carteira.json`.
 
-| | Posição | Candidata do radar |
-|---|---|---|
-| Borda | âmbar | azul |
-| Badge | `COMPRADO D+N`, `VENDIDO`, `TIME STOP` | `OBSERVAR`, `COMPRA` |
-| Barra | stop → alvo, traço branco = preço agora, traço cinza = entrada | aproximação até o gatilho |
-| Rótulo | `N% do alvo` | `falta ±X%` ou `NO GATILHO` |
-| Rodapé | `LOSS`/`GAIN` com a distância até cada nível | setor e o nível a romper/recuar |
+3. Build and open the dashboard:
 
-Por que 30 pregões: com time stop de 10, a operação ocupa o último terço do desenho e o resto é a estrutura que justificou a entrada. Encurtar a janela **piora** — o eixo é travado por stop e alvo, então uma série mais curta ocupa uma fração menor dele e fica mais achatada.
+   ```bash
+   python3 build.py --no-push
+   xdg-open painel-acoes.html
+   ```
 
-**Watchlist** (rodapé) — todos os tickers ordenados por força relativa de 30 pregões contra o índice, `●` marcando posição aberta. É acompanhamento, não decisão: por isso é uma faixa de texto e não um treemap ocupando meia tela.
+   The build prints a line such as `OK atualizado QUI 15:12 | 8 tickers | failures: none`.
 
-**Privacidade** — `MASK_PRIVATE_VALUES` no topo do `<script>` do `template.html`. Em `true`, some com todo valor em reais (patrimônio, custo, P&L monetário, preços de entrada e OCO) e mantém só percentuais e quantidades — útil em tela que fica ligada num ambiente compartilhado. O screenshot acima está com a máscara ligada.
+## Configuration
 
-## Carteira (`data/carteira.json`)
+Environment variables read by `build.py`:
 
-```json
-{
-  "atualizado": "2026-07-26",
-  "capital_operacional": 50000.00,
-  "caixa_operacional": 38500.00,
-  "teto_posicoes": 8,
-  "posicoes": [
-    {"ticker": "PETR4", "qtd": 200, "preco_entrada": 38.50, "data_compra": "2026-07-20",
-     "stop_loss": 36.58, "alvo": 41.58},
-    {"ticker": "ABEV3", "lado": "short", "qtd": 100, "preco_entrada": 15.20,
-     "data_compra": "2026-07-22", "stop_loss": 16.05, "alvo": 14.10}
-  ],
-  "historico_vendas": [
-    {"ticker": "BBAS3", "qtd": 300, "preco_entrada": 26.10, "preco_saida": 27.45,
-     "data_venda": "2026-06-15", "obs": "alvo atingido"}
-  ]
-}
-```
+| Variable / key | Required | Default | Description |
+|---|---|---|---|
+| `PAINEL_DATA_DIR` | No | `./data` | Directory holding `acoes.txt`, `carteira.json` and `radar.json` |
+| `RADAR_HTML_FILE` | No | none | Daily analysis HTML to parse into the radar |
+| `PAINEL_SSH_DEST` | No | none | SSH destination for the push, e.g. `root@homeassistant`; no push when unset |
+| `PAINEL_SSH_PORT` | No | `22` | SSH port |
+| `PAINEL_SSH_PATH` | No | `/config/www/painel-acoes.html` | Remote path written via `ssh ... cat >` |
 
-- `posicoes` — posições abertas long e short; cada uma vira um card na mesa e entra no P&L e na exposição. `lado` ausente significa `long`; use `"lado": "short"` em venda a descoberto. No short, queda é lucro e alta é prejuízo. Ticker **sem** sufixo `.SA`; posição fora da watchlist também é buscada.
-- **OCO dentro da posição** — `stop_loss` e `alvo` são campos numéricos do próprio objeto, então nascem e morrem com a posição: encerrou o trade, removeu o objeto, o OCO some junto. Não existe arquivo nem lista separada de OCO. Aliases aceitos: `stop`/`take_profit`. O formato legado com os níveis embutidos na string `obs` (`"OCO: stop R$36,58 / alvo R$41,58"`) continua sendo entendido, mas não use em registro novo — `obs` é texto livre.
-- O card da posição desenha 30 pregões com alvo verde, entrada âmbar e stop vermelho, e uma barra de progresso **stop → alvo**: extremidade esquerda é o stop, direita é o alvo, traço branco é o preço agora, traço cinza é a entrada. O rótulo `N% do alvo` é a posição do traço branco nesse trajeto. Sem OCO, o card cai pra uma barra de desvio desde a entrada.
-- `capital_operacional` e `caixa_operacional` alimentam o bloco de exposição do cockpit (posições a mercado sobre o capital, medido contra o teto de 80%). `teto_posicoes` (default 8) é só o denominador do contador `N / teto`. Ausentes, o bloco mostra `—`.
-- `historico_vendas` — trades encerrados. O painel ainda não exibe (é o dado bruto pra um futuro bloco de P&L realizado), mas registre `preco_saida` sempre: sem ele o resultado do trade fica irrecuperável.
-- **Carteira vazia é suportada**: com `posicoes: []` a mesa mostra só as candidatas do radar (ou um aviso de mesa vazia) e o P&L fica em "—" — nada de NaN nem tela quebrada.
+Portfolio file `data/carteira.json` (keys are in Portuguese and are read by the code; see `data/carteira.example.json`):
 
-## Opcionais
+| Variable / key | Required | Default | Description |
+|---|---|---|---|
+| `posicoes[]` | Yes | | Open positions; `[]` is supported and renders an empty desk |
+| `posicoes[].ticker` | Yes | | B3 ticker without `.SA`; fetched even if not in the watchlist |
+| `posicoes[].qtd` | Yes | | Quantity |
+| `posicoes[].preco_entrada` | Yes | | Entry price |
+| `posicoes[].data_compra` | No | | Entry date (ISO), drives the D+N time-stop badge |
+| `posicoes[].lado` | No | `long` | `short` for short sales |
+| `posicoes[].stop_loss` / `alvo` | No | | OCO levels (aliases `stop` / `take_profit`; legacy `obs` text "stop R$x / alvo R$y" is also parsed) |
+| `capital_operacional` | No | | Operating capital, denominator of the exposure gauge |
+| `caixa_operacional` | No | | Cash shown in the cockpit |
+| `teto_posicoes` | No | `8` | Denominator of the `N / max` position counter |
+| `historico_vendas[]` | No | | Closed trades; stored for future realized-P&L reporting, not displayed yet |
 
-### Publicar no Home Assistant
+In `template.html`, `MASK_PRIVATE_VALUES` (default `false`) hides all BRL amounts and keeps percentages.
 
-O build pode empurrar o HTML pro `www/` do HA via SSH (chave, sem senha):
+## Usage
+
+**Publish to Home Assistant.** With key-based SSH access:
 
 ```bash
 export PAINEL_SSH_DEST=root@homeassistant
-export PAINEL_SSH_PORT=22
-export PAINEL_SSH_PATH=/config/www/painel-acoes.html
 python3 build.py
 ```
 
-No HA, crie uma view `type: panel` com um card `iframe` apontando pra `/local/painel-acoes.html` (sem `aspect_ratio` — ele preenche a tela sozinho). Numa TV, o addon HAOS Kiosk abre a URL direto.
+In Home Assistant, add a `type: panel` view with an `iframe` card pointing to `/local/painel-acoes.html`.
 
-### Agendamento (systemd user timer)
-
-Exemplos em `systemd/`: roda a cada 15 min durante o pregão (seg–sex 10h–17h45) + snapshot às 18:05.
+**Schedule with systemd.** `systemd/` contains a user service and timer that run every 15 minutes
+during the session (Mon-Fri 10:00-17:45) plus an 18:05 snapshot. The service expects the repo at
+`~/painel-acoes`; edit `ExecStart` if it lives elsewhere.
 
 ```bash
 cp systemd/painel-acoes.* ~/.config/systemd/user/
@@ -111,9 +129,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now painel-acoes.timer
 ```
 
-### Radar (opcional)
-
-O radar alimenta duas coisas: o quadro de texto na coluna direita **e** os cards de candidata da mesa. Se você tem um job que gera um HTML de análise diária, aponte `RADAR_HTML_FILE` pra ele e adapte um dos parsers ao seu formato — ou edite `data/radar.json` na mão:
+**Radar.** Either write `data/radar.json` by hand or point `RADAR_HTML_FILE` at a daily analysis HTML:
 
 ```json
 {"generatedAt": "2026-07-26T15:45", "items": [
@@ -124,38 +140,25 @@ O radar alimenta duas coisas: o quadro de texto na coluna direita **e** os cards
 ]}
 ```
 
-- `kind` — `buy` (verde), `warn` (âmbar), `info` (neutro). Define só a cor no quadro de texto.
-- **Campos numéricos são o que gera o card na mesa.** Sem nenhum deles, o pick aparece só no texto.
-  - `ref` — preço no momento da análise; vira a barra de desvio quando não há mais nada;
-  - `tg` + `td` — preço do gatilho e direção: `up` dispara rompendo pra cima, `down` dispara recuando até o nível. **A direção importa**: sem ela, um gatilho de recuo é lido como já atingido só porque o preço está acima;
-  - `sl` / `tp` — stop e alvo; com os dois, o card ganha a barra completa stop→alvo.
-- O build traz dois parsers de HTML (`parse_radar_v2` e o `parse_radar` legado) escritos contra formatos de e-mail específicos. Ele tenta o v2, cai no legado, e se ambos falharem usa o cache. **Isso falha em silêncio**: o painel continua bonito servindo dados velhos. Confira o carimbo "último run" no quadro do radar — se ele parar de acompanhar a data, seu parser quebrou.
+`kind` (`buy`, `warn`, `info`) sets the color. Numeric fields create a desk card: `ref` (price at
+analysis time), `tg` + `td` (trigger price and direction, `up` for breakout, `down` for pullback),
+`sl` / `tp` (stop and target).
 
-Sem radar configurado, o quadro mostra um aviso e o painel funciona normal.
+**Validate the template** after editing it:
 
-## Arquivos
-
-```
-build.py          gerador (stdlib only)
-template.html     visual — edite aqui pra mudar o layout
-check.js          valida o painel gerado sem browser (node check.js painel-acoes.html)
-events.json       eventos datados; Focus/Payroll são calculados
-data/             watchlist + carteira (exemplos incluídos)
-systemd/          service + timer de exemplo
+```bash
+node check.js painel-acoes.html
 ```
 
-## Guardrails
+## Limitations
 
-- Se mais da metade das cotações falhar, o build **aborta** sem sobrescrever o painel anterior.
-- Posição sem cotação disponível também aborta.
-- Radar indisponível cai pro cache (`data/radar.json`) — o painel nunca quebra, só fica velho.
-- Sem chamadas de IA, sem API paga, sem token: o ciclo inteiro é Yahoo Finance público + arquivos locais.
-- **Ao editar o `template.html`, valide antes de publicar**: um erro de JS deixa a tela em branco sem aviso nenhum. Com browser: `google-chrome --headless=new --dump-dom painel-acoes.html 2>&1 | grep -i error`. Sem browser: `node check.js painel-acoes.html`, que executa o script do painel num DOM mínimo e reporta o erro com stack, mais o HTML que cada bloco gerou.
+- The two radar HTML parsers (`parse_radar_v2` and the legacy `parse_radar`) target one specific Portuguese-language e-mail format; adapt them for any other source. Parser failure is silent apart from a stderr line: the radar keeps showing cached data, so watch the "último run" timestamp.
+- Quotes come from Yahoo Finance's unofficial chart endpoint, which can change or rate-limit without notice.
+- Sector labels are a small hardcoded map in `build.py`; unknown tickers show `B3`.
+- The dashboard has no authentication or hardening; it is meant for a private network or an authenticated tunnel.
+- UI labels are in Brazilian Portuguese.
+- Not investment advice.
 
-## ⚠️ Disclaimer
+## License
 
-Projeto pessoal de hobby, pra uso privado (rede interna / túnel autenticado). Não há autenticação nem hardening pra exposição pública. Não é recomendação de investimento.
-
-## 📝 Licença
-
-MIT.
+MIT — see [LICENSE](LICENSE).

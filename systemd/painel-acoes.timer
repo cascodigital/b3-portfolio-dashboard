@@ -1,12 +1,12 @@
 [Unit]
-Description=Painel de acoes - a cada 15min no pregao + fechamento
+Description=B3 portfolio dashboard - every 15 min during the session + after close
 
 [Timer]
-# Pregao: seg-sex 10:00-17:45, a cada 15 min
+# Trading session: Mon-Fri 10:00-17:45, every 15 min
 OnCalendar=Mon..Fri *-*-* 10..17:00/15:00
-# Snapshot pos-fechamento
+# After-close snapshot
 OnCalendar=Mon..Fri *-*-* 18:05:00
-# Ao ligar o PC, roda a que ficou perdida
+# On boot, run any missed activation
 Persistent=true
 
 [Install]

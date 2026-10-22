@@ -1,5 +1,5 @@
 {
-  "_doc": "Eventos datados (um-off). Recorrentes (Focus seg, payroll 1ª sex) são calculados pelo build.py. Formato: data AAAA-MM-DD, titulo, info.",
+  "_doc": "One-off dated events. Recurring ones (Focus report on Mondays, US payroll on the first Friday) are computed by build.py. Format: data YYYY-MM-DD, titulo, info.",
   "eventos": [
     {"data": "2026-07-10", "titulo": "IPCA (Jun)", "info": "alto impacto · 09:00"},
     {"data": "2026-07-28", "titulo": "IPCA-15 (Jul)", "info": "prévia da inflação · 09:00"},

@@ -1,5 +1,5 @@
 [Unit]
-Description=Painel de acoes - build e push
+Description=B3 portfolio dashboard - build and push
 After=network-online.target
 
 [Service]

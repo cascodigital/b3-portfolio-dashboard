@@ -56,7 +56,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .phead h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
 .pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
 
-/* cockpit: carteira, exposição e Ibovespa no topo do painel grande */
+/* cockpit: portfolio, exposure and Ibovespa at the top of the main panel */
 .cock{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr 1.7fr;gap:9px;padding:10px 10px 0}
 .ck{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:10px 13px 11px;display:flex;flex-direction:column;min-width:0}
 .ck-big{font-size:27px;font-weight:600;letter-spacing:-.01em;margin:3px 0 8px;line-height:1.1}
@@ -73,7 +73,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .ck-chart{position:relative;flex:1;min-height:52px;margin:2px -13px 0}
 .ck-chart svg{position:absolute;inset:0;width:100%;height:100%}
 
-/* mesa de operação: um card por posição/pick, ocupando o centro inteiro */
+/* trading desk: one card per position/pick, filling the whole center */
 .desk{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));grid-auto-rows:1fr;gap:9px;padding:10px;min-height:0}
 .dk{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:7px;padding:10px 12px 11px;display:flex;flex-direction:column;min-height:0;min-width:0}
 .dk.own{border-left-color:var(--amber)}
@@ -82,11 +82,11 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .dk-spark svg{position:absolute;inset:0;width:100%;height:100%}
 .dk-px{position:absolute;right:0;top:0;font-family:var(--mono);font-size:15px;font-weight:700;text-shadow:0 1px 5px #000,0 0 3px #000}
 
-/* watchlist degradada a faixa de texto (só acompanhamento, não é decisão) */
+/* watchlist reduced to a text strip (monitoring only, not a decision area) */
 .wl{flex:0 0 auto;border-top:1px solid var(--line);padding:8px 12px;display:flex;flex-wrap:wrap;gap:3px 15px;align-items:baseline;font-family:var(--mono);font-size:11px;color:var(--faint);max-height:58px;overflow:hidden}
 .wl b{color:var(--mut);font-weight:600;margin-right:4px}
 
-/* header quebra em duas linhas quando badge + status não cabem (215px é apertado) */
+/* header wraps to two lines when badge + status do not fit (215px is tight) */
 .tg-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 7px;margin-bottom:8px}
 .tg-t{font-family:var(--mono);font-size:14px;font-weight:700}
 .tg-b{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:3px;background:#232d3c;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -102,9 +102,9 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .tg-f .g{color:var(--up)} .tg-f .l{color:var(--dn)}
 .tg-none{grid-column:1/-1;padding:12px;text-align:center;color:var(--faint);font-size:11.5px;background:var(--panel2);border:1px dashed var(--line);border-radius:6px}
 
-/* centro */
+/* center */
 
-/* banner mercado fechado */
+/* market-closed banner */
 .mkban{display:none;margin:10px 10px 0;padding:9px 14px;border-radius:7px;align-items:center;gap:14px;flex:0 0 auto}
 .mkban.on{display:flex}
 .mkban .ico{font-size:20px}
@@ -116,7 +116,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .mkban.on~.desk{opacity:.85}
 
 
-/* col direita */
+/* right column */
 .right{display:flex;flex-direction:column;gap:10px;min-height:0}
 .movers{padding:6px 10px;display:flex;flex-direction:column}
 .mrow{display:grid;grid-template-columns:52px 1fr 58px 62px;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;padding:4px 4px;border-radius:5px}
@@ -134,7 +134,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .rcard p{font-size:11.5px;color:var(--mut);line-height:1.45}
 .rcard time{font-size:10px;color:var(--faint)}
 
-/* rodapé */
+/* footer */
 .foot{grid-column:1/-1;display:flex;gap:10px}
 .agenda{flex:1;display:flex;gap:10px;padding:10px 14px;align-items:stretch}
 .ag{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
@@ -201,7 +201,7 @@ body{height:100vh;overflow:hidden;display:flex;flex-direction:column}
       <div class="movers" id="movers"></div>
     </div>
     <div class="panel radar">
-      <div class="phead"><h2>Radar skacoes</h2><span class="pill" id="radar-run"></span></div>
+      <div class="phead"><h2>Radar</h2><span class="pill" id="radar-run"></span></div>
       <div class="radar-body">
         <div class="rcard buy"><h3 class="up">ASAI3 · setup de reversão</h3><p>Rompeu a máxima dos últimos 5 pregões com volume acima da média. Candidata a swing se confirmar fechamento acima de 9,00.</p><time>hoje 15:45 · exemplo</time></div>
         <div class="rcard"><h3>LREN3 · posição aberta</h3><p>Consolidando entre 14,50 e 15,00. Acima do teu preço de entrada; suporte relevante em 14,30.</p><time>hoje 15:45 · exemplo</time></div>
@@ -228,7 +228,7 @@ const pct=v=>(v>=0?'+':'')+fmt(v)+'%';
 const chg=t=>(D[t].p/D[t].pd-1)*100;
 const cls=v=>v>=0?'up':'dn',sig=v=>(v>=0?'+':'−')+fmt(Math.abs(v));
 
-/* sparkline genérico */
+/* generic sparkline */
 function sparkSVG(h,{w=100,ht=30,ref=null,refs=null,color=null,fill=false}={}){
   const levels=refs||(ref!=null?[{value:ref,color:'var(--amber)',dash:'4 3'}]:[]);
   const levelValues=levels.map(x=>x.value).filter(Number.isFinite);
@@ -245,14 +245,14 @@ function sparkSVG(h,{w=100,ht=30,ref=null,refs=null,color=null,fill=false}={}){
   return s+`<circle cx="${X(h.length-1)}" cy="${Y(h[h.length-1])}" r="2.2" fill="${c}"/></svg>`;
 }
 
-/* tape — ordenado da maior queda pra maior alta */
+/* ticker tape, sorted from biggest drop to biggest gain */
 const tape=document.getElementById('tape');
 let th='';
 for(const t of Object.keys(D).sort((a,b)=>chg(a)-chg(b))){const c=chg(t);th+=`<span class="tk"><b>${t}</b><span>${fmt(D[t].p)}</span><span class="${c>=0?'up':'dn'}">${pct(c)}</span></span>`;}
 tape.innerHTML=th+th;
 
 const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-/* feriados B3 2026 (+ 01/01/2027) — atualizar na virada do ano */
+/* B3 holidays: placeholder list, replaced by build.py with the computed current + next year */
 const FERIADOS=['2026-01-01','2026-02-16','2026-02-17','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-20','2026-12-25','2027-01-01'];
 const pad2=x=>String(x).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
@@ -267,7 +267,7 @@ function tick(){
   st.textContent=open?'pregão aberto':'pregão fechado';st.className='st '+(open?'open':'closed');
   const ban=document.getElementById('mkban');
   if(open){ban.className='mkban';return}
-  /* próxima abertura: hoje 10:00 se ainda for dia útil antes do pregão, senão próximo dia útil */
+  /* next open: today 10:00 if it is a trading day before the session, otherwise the next trading day */
   const nx=new Date(n);
   if(!(isTrade(n)&&mins<600))do{nx.setDate(nx.getDate()+1)}while(!isTrade(nx));
   nx.setHours(10,0,0,0);
@@ -281,20 +281,20 @@ function tick(){
   ban.className='mkban on '+(wknd?'wknd':'after');
 }
 tick();setInterval(tick,1000);
-/* auto-reload: a cada 5min navega pra URL com cache-bust (?v=ts). location.reload(true) NÃO basta:
-   o HA serve /local/ com Cache-Control max-age=31d e o webkit/luakit ignora o forceReload -> recarregava do cache.
-   Trocar a query força buscar do servidor sempre. location.pathname não tem query, então o ?v não empilha. */
+/* auto-reload: every 5 min navigate to a cache-busted URL (?v=ts). location.reload(true) is NOT enough:
+   Home Assistant serves /local/ with Cache-Control max-age=31d and webkit/luakit ignore forceReload, so the
+   page reloaded from cache. Changing the query always hits the server. location.pathname has no query, so ?v never stacks. */
 setTimeout(()=>location.replace(location.pathname+'?v='+Date.now()),5*60*1000);
 
-/* carteira — soma de todas as posições */
-const MASK_PRIVATE_VALUES=false; // true mascara valores monetarios pessoais (util em tela publica)
+/* portfolio: sum over all positions */
+const MASK_PRIVATE_VALUES=false; // true hides personal currency amounts (useful on a shared screen)
 const POS=Object.keys(OWNED);
-/* time stop skacoes: swing = 2-10 dias úteis; conta pregões desde a entrada (dia da compra = D+0) */
+/* time stop: swing trades last 2-10 trading days; counts sessions since entry (purchase day = D+0) */
 const TIME_STOP=10;
 const bizDays=ds=>{if(!ds)return null;const d=new Date(ds+'T12:00:00'),today=new Date();today.setHours(12,0,0,0);
   let n=0;while(d<today){d.setDate(d.getDate()+1);if(isTrade(d))n++;}return n;};
-/* snooze (o.rv = data ISO 'revisto até'): enquanto hoje <= rv, o TIME STOP não pisca;
-   mostra os pregões que FALTAM até a revisão, no mesmo formato Nd das demais células */
+/* snooze (o.rv = ISO date 'reviewed until'): while today <= rv the TIME STOP badge is suppressed;
+   shows the sessions LEFT until the review, in the same Nd format as the other cells */
 const snoozed=o=>{if(!o.rv)return false;return new Date()<=new Date(o.rv+'T23:59:59');};
 const bizDaysUntil=ds=>{const d=new Date();d.setHours(12,0,0,0);const lim=new Date(ds+'T12:00:00');
   let n=0;while(d<lim){d.setDate(d.getDate()+1);if(isTrade(d))n++;}return n;};
@@ -304,7 +304,7 @@ const tsBadge=o=>{const n=bizDays(o.d);if(n===null)return'';
   const st=n>=TIME_STOP?'ts-out':n>=TIME_STOP-2?'ts-warn':'ts-ok';
   const txt=n>=TIME_STOP?`D+${n} · TIME STOP`:`D+${n}/${TIME_STOP}`;
   return`<span class="tag ts-tag ${st}">${txt}</span>`;};
-/* short (o.sh): lucro quando o preço CAI — sinal invertido em P&L e variação diária */
+/* short (o.sh): profit when price FALLS, so the sign is inverted for P&L and daily change */
 const sgn=o=>o.sh?-1:1;
 let cost=0,val=0,pld=0,pl=0;
 for(const t of POS){const o=OWNED[t];cost+=o.q*o.e;val+=o.q*D[t].p;pld+=sgn(o)*o.q*(D[t].p-D[t].pd);pl+=sgn(o)*o.q*(D[t].p-o.e);}
@@ -314,10 +314,10 @@ const set=(id,txt,v)=>{const el=document.getElementById(id);el.textContent=txt;e
 set('pl',cost?(MASK_PRIVATE_VALUES?pct(pl/cost*100):`${sig(pl)} (${pct(pl/cost*100)})`):'—',pl);
 set('pld',(val-pld)?(MASK_PRIVATE_VALUES?pct(pld/(val-pld)*100):`${sig(pld)} (${pct(pld/(val-pld)*100)})`):'—',pld);
 
-/* ── cockpit: exposição ─────────────────────────────────────────────────────
-   Exposição = posições a mercado / capital operacional. O teto da estratégia é
-   80% (rules/portfolio.md), marcado como risco no gauge. Percentuais sempre
-   visíveis; valores em reais respeitam o mascaramento. */
+/* ── cockpit: exposure ──────────────────────────────────────────────────────
+   Exposure = positions at market value / operating capital. The strategy cap is
+   80%, drawn as the full scale of the gauge. Percentages are always visible;
+   BRL amounts honor MASK_PRIVATE_VALUES. */
 const TETO=80,MAXPOS=CART.teto||8;
 const cap=CART.cap||0,expo=cap?val/cap*100:0;
 document.getElementById('expv').textContent=cap?pct(expo).replace('+',''):'—';
@@ -341,7 +341,7 @@ document.getElementById('room').textContent=cap?pct(TETO-expo).replace('+','')+'
 })();
 
 
-/* radar — carimbo HOJE/DIA ANTERIOR hh:mm */
+/* radar: weekday + hh:mm timestamp of the last run */
 (function(){
   const g=new Date(RADAR.generatedAt);
   const dsem=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
@@ -353,21 +353,22 @@ document.getElementById('room').textContent=cap?pct(TETO-expo).replace('+','')+'
     `<div class="rcard ${kc[it.kind]||''}"><h3 ${hc[it.kind]||''}>${it.t?it.t+' · ':''}${it.title}</h3><p>${it.body}</p><time>${stamp}</time></div>`).join('');
 })();
 
-/* ── gatilhos ao vivo ─────────────────────────────────────────────────────────
-   Barra "quanto falta pro nível". Duas formas:
-   (a) stop + alvo conhecidos  -> barra LOSS←agora→GAIN com % do caminho;
-   (b) só preço de referência  -> barra de desvio (centro = referência), útil pra
-       pick de OBSERVAR, onde o radar só carimba o preço do run.
-   Fontes: OWNED (OCO do carteira.json) e RADAR (níveis extraídos pelo build.py;
-   cache antigo sem ref simplesmente não gera card). */
+/* ── live triggers ──────────────────────────────────────────────────────────
+   "Distance to level" bar. Three forms:
+   (a) stop + target known     -> LOSS<-now->GAIN bar with % of the way covered;
+   (b) trigger price (tg/td)   -> approach bar towards the trigger;
+   (c) reference price only    -> deviation bar (center = reference), useful for
+       OBSERVAR picks where the radar only stamps the price at run time.
+   Sources: OWNED (OCO from carteira.json) and RADAR (levels extracted by build.py;
+   an old cache without ref simply produces no card). */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const DEV_SCALE=6; /* ±6% satura a barra de desvio */
+const DEV_SCALE=6; /* ±6% saturates the deviation bar */
 function trigCard(x){
   const d=D[x.t];if(!d)return'';
   const p=d.p,s=x.sh?-1:1,own=x.kind==='own',mask=own&&MASK_PRIVATE_VALUES;
-  const money=v=>mask?'':fmt(v)+' ';  /* mascarado: só percentuais, sem travessão repetido */
+  const money=v=>mask?'':fmt(v)+' ';  /* masked: percentages only, no repeated dash */
   const bcls=own?'own':(x.sh?'shrt':'');
-  /* gráfico de 30 pregões com os níveis que importam desenhados */
+  /* 30-session chart with the relevant levels drawn */
   const lv=[];
   if(own&&Number.isFinite(x.ref))lv.push({value:x.ref,color:'var(--amber)',dash:'4 3'});
   if(Number.isFinite(x.tp))lv.push({value:x.tp,color:'var(--up)',dash:'5 3'});
@@ -387,8 +388,8 @@ function trigCard(x){
       <div class="tg-f"><span class="l">LOSS ${money(x.sl)}${pct(dw)}</span><span class="g">GAIN ${money(x.tp)}${pct(up)}</span></div></div>`;
   }
   if(Number.isFinite(x.tg)){
-    /* pick de OBSERVAR: barra de aproximação — 100% = preço no gatilho, 0% = a DEV_SCALE de distância.
-       td='down' = gatilho de recuo (dispara caindo até o nível), senão rompimento pra cima. */
+    /* OBSERVAR pick: approach bar, 100% = price at the trigger, 0% = DEV_SCALE away.
+       td='down' = pullback trigger (fires falling to the level), otherwise an upward breakout. */
     const dir=x.td==='down'?-1:1;
     const gap=(x.tg/p-1)*100,near=1-clamp(Math.abs(gap)/DEV_SCALE,0,1);
     const hit=dir>0?gap<=0:gap>=0;
@@ -407,7 +408,7 @@ function trigCard(x){
 (function(){
   const items=[];
   for(const t of POS){const o=OWNED[t],n=bizDays(o.d);
-    /* mesma regra do card da esquerda: D+10 sem snooze = time stop estourado */
+    /* D+10 without snooze = time stop exceeded */
     const ts=n===null?'':(n>=TIME_STOP?(snoozed(o)?` REVER ${revLbl(o)}`:' TIME STOP'):` D+${n}`);
     items.push({t,kind:'own',badge:(o.sh?'VENDIDO':'COMPRADO')+ts,ref:o.e,sl:o.sl,tp:o.tp,sh:o.sh});}
   for(const it of (RADAR.items||[])){
@@ -416,20 +417,20 @@ function trigCard(x){
     items.push({t:it.t,kind:it.sh?'shrt':'radar',badge:String(it.title).replace(/^\d+º\s*—\s*/,'').toUpperCase(),
                 ref:it.ref,tg:it.tg,td:it.td,sl:it.sl,tp:it.tp,sh:it.sh});
   }
-  /* 6 cards cobrem o centro sem espremer; o excedente fica no Radar da direita */
+  /* 6 cards fill the center without squeezing; the rest stays in the right-hand Radar */
   const cards=items.slice(0,6).map(trigCard).filter(Boolean);
   const n=cards.length,cols=n<=2?Math.max(n,1):(n<=4?2:3),resto=n%cols;
   const desk=document.getElementById('desk');
   desk.style.gridTemplateColumns=`repeat(${cols},1fr)`;
-  /* linha final incompleta: o último card ocupa as colunas que sobraram */
+  /* incomplete last row: the last card spans the remaining columns */
   if(resto&&n>cols)cards[n-1]=cards[n-1].replace('class="dk ',`style="grid-column:span ${cols-resto+1}" class="dk `);
   const html=cards.join('');
   desk.innerHTML=html||
     '<div class="tg-none">nenhuma posição aberta e nenhum pick com nível no último run — mesa vazia</div>';
 })();
 
-/* watchlist: só acompanhamento, degradada a uma faixa de texto ordenada por
-   força relativa 30d vs IBOV. Quem exige decisão está nos cards acima. */
+/* watchlist: monitoring only, reduced to a text strip sorted by 30-day relative
+   strength vs IBOV. Anything that needs a decision is in the cards above. */
 const IB30=(IDX.IBOV.p/IDX.IBOV.h[0]-1)*100;
 const r30=t=>(D[t].p/D[t].h[0]-1)*100;
 const rs=t=>r30(t)-IB30;
@@ -438,7 +439,7 @@ document.getElementById('wl').innerHTML=
   `<span class="lbl" style="margin-right:8px">watchlist · 30d vs IBOV ${pct(IB30)}</span>`+
   tiles.map(x=>`<span title="${x.t} · ${D[x.t].s} · hoje ${pct(x.dc)}"><b>${x.t}${OWNED[x.t]?'●':''}</b><span class="${cls(x.c)}">${pct(x.c)}</span></span>`).join('');
 
-/* movers com sparkline */
+/* movers with sparkline */
 const sorted=[...tiles].sort((a,b)=>b.dc-a.dc);
 const movers=[...sorted.slice(0,3),...sorted.slice(-3)];
 document.getElementById('movers').innerHTML=movers.map(x=>
